@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>STB Character Editor</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.0/css/all.css">
+  </head>
+  <body>
+    <div id="app">
+      <div id="tree">
+        <div>
+          <input type="button" value="Download JSON" @click="downloadAsJson()" />
+        </div>
+        <ul>
+          <li><router-link to="/illustrations">Illustrations</router-link></li>
+          <li><router-link to="/tileset">Tileset</router-link></li>
+          <li><router-link to="/animations">Animations</router-link></li>
+        </ul>
+        <p><router-link to="/help">Help</router-link></p>
+      </div>
+      <div id="toolbar">
+        <div>
+          <toolbar ref="toolbar" />
+        </div>
+      </div>
+      <div id="content" ref="content">
+        <router-view></router-view>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
