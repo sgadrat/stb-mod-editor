@@ -82,8 +82,8 @@ table.canvas-grid td {
 .tool-grid-pixels table.canvas-grid { border: 2px solid black; }
 .tool-grid-pixels table.canvas-grid td { border: 1px solid black; }
 
-.tool-grid-tiles table.canvas-grid.frame-sprite { border-color: red; }
-.tool-grid-pixels table.canvas-grid.frame-sprite { border-color: red; }
+.tool-grid-tiles table.canvas-grid.frame-sprite { border-color: green; }
+.tool-grid-pixels table.canvas-grid.frame-sprite { border-color: green; }
 
 .tab-tileset table.canvas-grid { border: 2px solid black; }
 
@@ -103,7 +103,7 @@ table.canvas-grid.background {
 }
 
 .tool-select table.canvas-grid.frame-sprite:hover {
-  border: 2px solid green;
+  border: 2px solid red;
   z-index: 100;
   filter: brightness(110%);
 }
@@ -113,22 +113,21 @@ table.canvas-grid.frame-sprite.selected { border: 2px solid blue; }
 
 
 div.animation-frame {
-  display: flex;
   margin-top: 1em;
 }
 
 div.frame-canvas {
-  flex: 0 auto;
   position: relative;
-  margin: 0 2em;
 }
 
 div.sprite-info {
+  vertical-align: middle;
   background-color: #f88; /*TODO*/
-  flex: 1;
 }
 
-
+.frame-thumbnail {
+  margin: 0.5em;
+}
 
 .bgcolor-none { background-color: #222; }
 .bgcolor0 { background-color: transparent; }

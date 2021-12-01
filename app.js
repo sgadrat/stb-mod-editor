@@ -90,18 +90,11 @@ const NES_COLORS = [
   '#000000',
 ]
 
-
-class Drawer {
-  constructor(tree) {
-    this.tree = tree;
-    //TODO
-    this.background = '#222';
-    this.palettes = [
-      [null, '#888', '#ccc', '#fff'],
-      [null, '#22f', '#44f', '#88f'],
-    ];
-    this.zoom = 16;
-  }
+class Utils {
+  static DEFAULT_PALETTES = [
+    [null, '#888', '#ccc', '#fff'],
+    [null, '#22f', '#44f', '#88f'],
+  ];
 
   static frameRect(frame) {
     const sprites_x = frame.sprites.map(s => s.x);
@@ -132,46 +125,48 @@ class Drawer {
     }
   }
 
-  getTileByName(name) {
-    const tileset = this.tree.tileset;
+  static getTileByName(tree, name) {
+    const tileset = tree.tileset;
     const idx = tileset.tilenames.indexOf(name);
     return tileset.tiles[idx];
   }
 
-  drawFrame(ctx, frame) {
-    const rect = this.frameRect(frame);
-    ctx.canvas.width = rect.width * this.zoom;
-    ctx.canvas.height = rect.height * this.zoom;
+  static drawFrame(ctx, tree, frame, { zoom = 1, background = '#222', palettes = null }) {
+    palettes ||= this.DEFAULT_PALETTES;
 
-    ctx.fillStyle = this.background;
-    ctx.fillRect(0, 0, rect.width * this.zoom, rect.height * this.zoom);
+    const rect = this.frameRect(frame);
+    ctx.canvas.width = rect.width * zoom;
+    ctx.canvas.height = rect.height * zoom;
+
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, rect.width * zoom, rect.height * zoom);
+
+    const drawSpriteTile = (sprite, x, y) => {
+      const tile = this.getTileByName(tree, sprite.tile);
+      const palette = palettes[sprite.attr & 0x1];
+      for (let [yy, row] of tile.representation.entries()) {
+        for (let [xx, value] of row.entries()) {
+          const color = palette[value];
+          if (color === null) {
+            continue;  // transparent, don't draw
+          }
+          const pixel_x = x + (sprite.attr & 0x40 ? 7-xx : xx);
+          const pixel_y = y + (sprite.attr & 0x80 ? 7-yy : yy);
+
+          ctx.fillStyle = color;
+          ctx.fillRect(pixel_x * zoom, pixel_y * zoom, zoom, zoom);
+        }
+      }
+    };
 
     for (let sprite of frame.sprites) {
       if (!sprite.foreground) {
-        this.drawSpriteTile(ctx, sprite, sprite.x - rect.x, sprite.y - rect.y)
+        drawSpriteTile(sprite, sprite.x - rect.x, sprite.y - rect.y);
       }
     }
     for (let sprite of frame.sprites) {
       if (sprite.foreground) {
-        this.drawSpriteTile(ctx, sprite, sprite.x - rect.x, sprite.y - rect.y)
-      }
-    }
-  }
-
-  drawSpriteTile(ctx, sprite, x, y) {
-    const palette = this.palettes[sprite.attr & 0x1];
-    const tile = this.getTileByName(sprite.tile);
-    for (let [yy, row] of tile.representation.entries()) {
-      for (let [xx, value] of row.entries()) {
-        const color = palette[value];
-        if (color === null) {
-          continue;  // transparent, don't draw
-        }
-        const pixel_x = x + (sprite.attr & 0x40 ? 7-xx : xx);
-        const pixel_y = y + (sprite.attr & 0x80 ? 7-yy : yy);
-
-        ctx.fillStyle = color;
-        ctx.fillRect(pixel_x * this.zoom, pixel_y * this.zoom, this.zoom, this.zoom);
+        drawSpriteTile(sprite, sprite.x - rect.x, sprite.y - rect.y);
       }
     }
   }
@@ -377,7 +372,7 @@ app.component('stb-animation-frame', {
 
   computed: {
     rect() {
-      return Drawer.frameRect(this.frame);
+      return Utils.frameRect(this.frame);
     },
   },
 
@@ -401,6 +396,7 @@ app.component('stb-animation-frame', {
         position: 'absolute',
         left: `calc(${x} * var(--grid-zoom))`,
         top: `calc(${y} * var(--grid-zoom))`,
+        //TODO Borders are not symmetrical (1px is odd), so this create artifacts
         transform: `scale(${sx},${sy})`,
       }
     },
@@ -408,6 +404,7 @@ app.component('stb-animation-frame', {
 
   template: `
     <div class="animation-frame">
+      <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
       <div class="frame-canvas">
         <table class="canvas-grid background bgcolor-none">
           <tr v-for="y in Array(rect.height).keys()">
@@ -423,7 +420,6 @@ app.component('stb-animation-frame', {
           @mousemove.capture="activeTool.value === 'select' && $event.stopPropagation()"
           />
       </div>
-      <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
     </div>
   `,
 });
@@ -433,14 +429,32 @@ app.component('stb-sprite-info', {
 
   template: `
     <div class="sprite-info">
-      <div><label>X: <input v-model="sprite.x" type="number" style="width: 5em;"/></label></div>
-      <div><label>Y: <input v-model="sprite.y" type="number" style="width: 5em;"/></label></div>
-      <div>
-        <button class="icon" @click="sprite.attr ^= 0x40" :class="{ enabled: sprite.attr & 0x40 }" title="Horizontal flip"><i class="fas fa-arrows-alt-h"/></button>
-        <button class="icon" @click="sprite.attr ^= 0x80" :class="{ enabled: sprite.attr & 0x80 }" title="Vertical flip"><i class="fas fa-arrows-alt-v"/></button>
-        <button class="icon" @click="sprite.foreground = !sprite.foreground" :class="{ enabled: sprite.foreground }" title="Foreground"><i class="fas fa-layer-group"/></button>
-      </div>
+      <label>X: <input v-model="sprite.x" type="number" style="width: 3.5em;"/></label>
+      <label>Y: <input v-model="sprite.y" type="number" style="width: 3.5em;"/></label>
+      <button class="icon" @click="sprite.attr ^= 0x40" :class="{ enabled: sprite.attr & 0x40 }" title="Horizontal flip"><i class="fas fa-arrows-alt-h"/></button>
+      <button class="icon" @click="sprite.attr ^= 0x80" :class="{ enabled: sprite.attr & 0x80 }" title="Vertical flip"><i class="fas fa-arrows-alt-v"/></button>
+      <button class="icon" @click="sprite.foreground = !sprite.foreground" :class="{ enabled: sprite.foreground }" title="Foreground"><i class="fas fa-layer-group"/></button>
     </div>
+  `,
+});
+
+app.component('stb-frame-thumbnail', {
+  props: ['frame'],
+  inject: ['tree'],
+
+  methods: {
+    drawFrame() {
+      const ctx = this.$refs.canvas.getContext('2d');
+      return Utils.drawFrame(ctx, this.tree.value, this.frame, { zoom: 2 });
+    },
+  },
+
+  mounted() {
+    Vue.watchEffect(() => this.drawFrame());
+  },
+
+  template: `
+    <canvas ref="canvas" class="frame-thumbnail" />
   `,
 });
 
@@ -528,6 +542,7 @@ const AnimationTab = {
   data() {
     return {
       animation: null,
+      selectedFrame: null,
     }
   },
 
@@ -553,7 +568,14 @@ const AnimationTab = {
         <label>Name: <input v-model="animation.name" style="width: 40%;"/></label>
       </div>
       <div>
-        <stb-animation-frame :frame="animation.frames[0]" />
+        <stb-frame-thumbnail
+          v-for="frame of animation.frames"
+          :frame="frame"
+          @click="selectedFrame = frame"
+         />
+      </div>
+      <div>
+        <stb-animation-frame v-if="selectedFrame" :frame="selectedFrame" />
       </div>
     </div>
   `,
