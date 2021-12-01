@@ -315,14 +315,14 @@ app.component('toolbar', {
       </tr>
     </table>
     <div>
-      <button @click="zoomOut()" title="Zoom-out"><i class="fas fa-search-minus"/></button>
-      <button @click="zoomIn()" title="Zoom in"><i class="fas fa-search-plus"/></button>
+      <button class="icon" @click="zoomOut()" title="Zoom-out"><i class="fas fa-search-minus"/></button>
+      <button class="icon" @click="zoomIn()" title="Zoom in"><i class="fas fa-search-plus"/></button>
     </div>
     <div>
-      <button @click="tool = 'brush'" :class="{ enabled: tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"></button>
-      <button @click="tool = 'select'" :class="{ enabled: tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"></button>
+      <button class="icon" @click="tool = 'brush'" :class="{ enabled: tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"/></button>
+      <button class="icon" @click="tool = 'select'" :class="{ enabled: tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
     </div>
-    <button @click="changeGrid()" title="Grid style"><i class="fas fa-border-style"/></button>
+    <button class="icon" @click="changeGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
   `,
 });
 
@@ -369,6 +369,12 @@ app.component('stb-animation-frame', {
   props: ['frame'],
   inject: ['tree', 'activeTool'],
 
+  data() {
+    return {
+      selectedSprite: null,
+    }
+  },
+
   computed: {
     rect() {
       return Drawer.frameRect(this.frame);
@@ -398,33 +404,44 @@ app.component('stb-animation-frame', {
         transform: `scale(${sx},${sy})`,
       }
     },
-
-    selectSprite(sprite) {
-      //TODO
-    },
   },
 
   template: `
-    <div class="frame-canvas">
-      <table class="canvas-grid bgcolor-none">
-        <tr v-for="y in Array(rect.height).keys()">
-          <td v-for="x in Array(rect.width).keys()" />
-        </tr>
-      </table>
-      <stb-tiles
-        v-for="sprite of frame.sprites"
-        class="frame-sprite"
-        :tiles.sync="[[spriteTile(sprite)]]"
-        :style="spriteStyle(sprite)"
-        @click.capture="activeTool.value === 'select' && (selectSprite(sprite), $event.stopPropagation())"
-        @mousemove.capture="activeTool.value === 'select' && $event.stopPropagation()"
-        />
+    <div class="animation-frame">
+      <div class="frame-canvas">
+        <table class="canvas-grid background bgcolor-none">
+          <tr v-for="y in Array(rect.height).keys()">
+            <td v-for="x in Array(rect.width).keys()" />
+          </tr>
+        </table>
+        <stb-tiles
+          v-for="sprite of frame.sprites"
+          :class="['frame-sprite', { selected: sprite === selectedSprite, foreground: sprite.foreground }]"
+          :tiles.sync="[[spriteTile(sprite)]]"
+          :style="spriteStyle(sprite)"
+          @click.capture="activeTool.value === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
+          @mousemove.capture="activeTool.value === 'select' && $event.stopPropagation()"
+          />
+      </div>
+      <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
     </div>
   `,
+});
 
-  //TODO flags
-  // 0x20: background
-  // 0x1f: palette
+app.component('stb-sprite-info', {
+  props: ['sprite'],
+
+  template: `
+    <div class="sprite-info">
+      <div><label>X: <input v-model="sprite.x" type="number" style="width: 5em;"/></label></div>
+      <div><label>Y: <input v-model="sprite.y" type="number" style="width: 5em;"/></label></div>
+      <div>
+        <button class="icon" @click="sprite.attr ^= 0x40" :class="{ enabled: sprite.attr & 0x40 }" title="Horizontal flip"><i class="fas fa-arrows-alt-h"/></button>
+        <button class="icon" @click="sprite.attr ^= 0x80" :class="{ enabled: sprite.attr & 0x80 }" title="Vertical flip"><i class="fas fa-arrows-alt-v"/></button>
+        <button class="icon" @click="sprite.foreground = !sprite.foreground" :class="{ enabled: sprite.foreground }" title="Foreground"><i class="fas fa-layer-group"/></button>
+      </div>
+    </div>
+  `,
 });
 
 

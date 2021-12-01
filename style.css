@@ -27,7 +27,7 @@
   margin: 1em 0.5em;
 }
 
-#toolbar button {
+button.icon {
   background-color: #ddd;
   color: black;
   font-size: 20px;
@@ -38,11 +38,11 @@
   margin: 1px;
 }
 
-#toolbar button:hover {
+button.icon:hover {
   filter: brightness(75%);
 }
 
-#toolbar button.enabled {
+button.icon.enabled {
   background-color: #bbb;
   border: 2px solid #444;
 }
@@ -93,14 +93,39 @@ table.canvas-grid td {
 .tool-grid-pixels .tab-illustrations table.canvas-grid tr:nth-child(8n) td { border-bottom: 2px solid black; }
 .tool-grid-pixels .tab-illustrations table.canvas-grid td:nth-child(8n) { border-right: 2px solid black; }
 
+table.canvas-grid.background {
+  border: 2px solid black;
+  box-sizing: content-box;
+}
+
+.frame-sprite.foreground {
+  z-index: 10;
+}
+
 .tool-select table.canvas-grid.frame-sprite:hover {
   border: 2px solid green;
   z-index: 100;
   filter: brightness(110%);
 }
 
+table.canvas-grid.frame-sprite.selected { border: 2px solid blue; }
+.tool-grid-off table.canvas-grid.frame-sprite { border: 1px solid transparent; }
+
+
+div.animation-frame {
+  display: flex;
+  margin-top: 1em;
+}
+
 div.frame-canvas {
+  flex: 0 auto;
   position: relative;
+  margin: 0 2em;
+}
+
+div.sprite-info {
+  background-color: #f88; /*TODO*/
+  flex: 1;
 }
 
 
