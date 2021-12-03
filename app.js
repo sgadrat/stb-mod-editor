@@ -92,11 +92,6 @@ const NES_COLORS = [
 ]
 
 class Utils {
-  static DEFAULT_PALETTES = [
-    [null, '#888', '#ccc', '#fff'],
-    [null, '#22f', '#44f', '#88f'],
-  ];
-
   static frameRect(frame) {
     const sprites_x = frame.sprites.map(s => s.x);
     const sprites_y = frame.sprites.map(s => s.y);
@@ -132,9 +127,7 @@ class Utils {
     return tileset.tiles[idx];
   }
 
-  static drawFrame(ctx, tree, frame, { zoom = 1, background = '#222', palettes = null }) {
-    palettes ||= this.DEFAULT_PALETTES;
-
+  static drawFrame(ctx, tree, frame, { zoom = 1, background = '#222', palettes }) {
     const rect = this.frameRect(frame);
     ctx.canvas.width = rect.width * zoom;
     ctx.canvas.height = rect.height * zoom;
@@ -147,14 +140,13 @@ class Utils {
       const palette = palettes[sprite.attr & 0x1];
       for (let [yy, row] of tile.representation.entries()) {
         for (let [xx, value] of row.entries()) {
-          const color = palette[value];
-          if (color === null) {
+          if (value === 0) {
             continue;  // transparent, don't draw
           }
           const pixel_x = x + (sprite.attr & 0x40 ? 7-xx : xx);
           const pixel_y = y + (sprite.attr & 0x80 ? 7-yy : yy);
 
-          ctx.fillStyle = color;
+          ctx.fillStyle = palette[value-1];
           ctx.fillRect(pixel_x * zoom, pixel_y * zoom, zoom, zoom);
         }
       }
@@ -170,6 +162,16 @@ class Utils {
         drawSpriteTile(sprite, sprite.x - rect.x, sprite.y - rect.y);
       }
     }
+  }
+
+  static getPalettes(tree, swap) {
+    return ['primary_colors', 'secondary_colors', 'alternate_colors'].map(k => (
+      tree.color_swaps[k][swap].colors.map(v => NES_COLORS[v])
+    ));
+  }
+
+  static getAllPalettes(tree) {
+    return tree.color_swaps.primary_colors.map((_, swap) => this.getPalettes(tree, swap));
   }
 }
 
@@ -199,9 +201,7 @@ class Conf {
   }
 
   palettes(tree) {
-    return ['primary_colors', 'secondary_colors', 'alternate_colors'].map(k => (
-      tree.color_swaps[k][this.colorSwap].colors.map(v => NES_COLORS[v])
-    ));
+    return Utils.getPalettes(tree, this.colorSwap);
   }
 }
 
@@ -284,7 +284,7 @@ const app = Vue.createApp({
       let rules = [];
       for (const [p, palette] of palettes.entries()) {
         for (const [c, color] of palette.entries()) {
-          rules.push(`--color-p${p}c${c}: ${color};`);
+          rules.push(`--color-p${p}-c${c+1}: ${color};`);
         }
       }
       this.setCssRule('palettes', `:root { ${rules.join('')} }`);
@@ -313,6 +313,13 @@ const app = Vue.createApp({
 
 app.component('toolbar', {
   props: ['conf'],
+  inject: ['tree'],
+
+  data() {
+    return {
+      palettePicker: false,
+    }
+  },
 
   methods: {
     changeGrid() {
@@ -324,6 +331,10 @@ app.component('toolbar', {
         this.conf.grid = 'off';
       }
     },
+
+    colorSwapPalettes() {
+      return Utils.getAllPalettes(this.tree);
+    },
   },
 
   template: `
@@ -333,10 +344,19 @@ app.component('toolbar', {
         :class="{ 'active-color': c === conf.drawColor() }"
         @click="conf.color = c"
        >
-        <td :class="'bg-p0c'+c" />
-        <td :class="'bg-p1c'+c" />
+        <td :class="'bg-p0-c'+c" />
+        <td :class="'bg-p1-c'+c" />
       </tr>
     </table>
+    <button class="icon" @click="palettePicker = !palettePicker" title="Palette selection"><i class="fas fa-palette"/></button>
+    <div class="palette-picker" v-if="palettePicker">
+      <table v-if="tree" v-for="(palettes, swap) of colorSwapPalettes()" @click="conf.colorSwap = swap; palettePicker = false">
+        <tr v-for="i in [0, 1, 2]">
+          <td :style="{ 'background-color': palettes[0][i] }" />
+          <td :style="{ 'background-color': palettes[1][i] }" />
+        </tr>
+      </table>
+    </div>
     <div>
       <button class="icon" @click="conf.zoomStep(-1)" title="Zoom-out"><i class="fas fa-search-minus"/></button>
       <button class="icon" @click="conf.zoomStep(1)" title="Zoom in"><i class="fas fa-search-plus"/></button>
@@ -351,10 +371,17 @@ app.component('toolbar', {
 
 
 app.component('stb-tiles', {
-  props: ['tiles'],
+  props: {
+    tiles: {},
+    palette: {default: 'default'}
+  },
   inject: ['conf'],
 
   methods: {
+    getColorClass(x, y) {
+      return `bg-${this.palette}-c${this.getPixel(x, y)}`;
+    },
+
     getTile(x, y) {
       return this.tiles[Math.floor(y / 8)][Math.floor(x / 8)];
     },
@@ -378,7 +405,7 @@ app.component('stb-tiles', {
     <table class="canvas-grid">
       <tr v-for="y in Array(tiles.length * 8).keys()">
         <td v-for="x in Array(tiles[0].length * 8).keys()"
-          :class="'bgcolor'+getPixel(x, y)"
+          :class="getColorClass(x, y)"
           @mousemove="mouseMove($event, x, y)"
           @click="drawPixel(x, y)"
          />
@@ -443,6 +470,7 @@ app.component('stb-animation-frame', {
           v-for="sprite of frame.sprites"
           :class="['frame-sprite', { selected: sprite === selectedSprite, foreground: sprite.foreground }]"
           :tiles.sync="[[spriteTile(sprite)]]"
+          :palette="'p' + (sprite.attr & 0x1)"
           :style="spriteStyle(sprite)"
           @click.capture="conf.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
           @mousemove.capture="conf.tool === 'select' && $event.stopPropagation()"
@@ -468,12 +496,13 @@ app.component('stb-sprite-info', {
 
 app.component('stb-frame-thumbnail', {
   props: ['frame'],
-  inject: ['tree'],
+  inject: ['tree', 'conf'],
 
   methods: {
     drawFrame() {
       const ctx = this.$refs.canvas.getContext('2d');
-      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2 });
+      const palettes = this.conf.palettes(this.tree);
+      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2, palettes });
     },
   },
 

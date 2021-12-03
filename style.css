@@ -25,6 +25,7 @@
 
 #toolbar {
   margin: 1em 0.5em;
+  z-index: 100;
 }
 
 button.icon {
@@ -61,6 +62,28 @@ button.icon.enabled {
 
 #toolbar tr.active-color td {
   border: 2px solid red;
+}
+
+.palette-picker {
+  position: absolute;
+  display: flex;
+  border: 1px solid black;
+  background-color: #222;
+  width: max-content;
+}
+
+#toolbar .palette-picker table {
+  border-collapse: collapse;
+  margin: 2px;
+  border: 1px solid black;
+}
+
+#toolbar .palette-picker td {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 
@@ -104,7 +127,7 @@ table.canvas-grid.background {
 
 .tool-select table.canvas-grid.frame-sprite:hover {
   border: 2px solid red;
-  z-index: 100;
+  z-index: 30;
   filter: brightness(110%);
 }
 
@@ -130,23 +153,24 @@ div.sprite-info {
 }
 
 .bgcolor-none { background-color: #222; }
-.bgcolor0 { background-color: transparent; }
-.bgcolor1 { background-color: #888; }
-.bgcolor2 { background-color: #ccc; }
-.bgcolor3 { background-color: #fff; }
 
-.bg-p0c0 { background-color: var(--color-p0c0); }
-.bg-p0c1 { background-color: var(--color-p0c1); }
-.bg-p0c2 { background-color: var(--color-p0c2); }
-.bg-p0c3 { background-color: var(--color-p0c3); }
+.bg-default-c0 { background-color: transparent; }
+.bg-default-c1 { background-color: #888; }
+.bg-default-c2 { background-color: #ccc; }
+.bg-default-c3 { background-color: #fff; }
 
-.bg-p1c0 { background-color: var(--color-p1c0); }
-.bg-p1c1 { background-color: var(--color-p1c1); }
-.bg-p1c2 { background-color: var(--color-p1c2); }
-.bg-p1c3 { background-color: var(--color-p1c3); }
+.bg-p0-c0 { background-color: transparent; }
+.bg-p0-c1 { background-color: var(--color-p0-c1); }
+.bg-p0-c2 { background-color: var(--color-p0-c2); }
+.bg-p0-c3 { background-color: var(--color-p0-c3); }
 
-.bg-p2c0 { background-color: var(--color-p2c0); }
-.bg-p2c1 { background-color: var(--color-p2c1); }
-.bg-p2c2 { background-color: var(--color-p2c2); }
-.bg-p2c3 { background-color: var(--color-p2c3); }
+.bg-p1-c0 { background-color: transparent; }
+.bg-p1-c1 { background-color: var(--color-p1-c1); }
+.bg-p1-c2 { background-color: var(--color-p1-c2); }
+.bg-p1-c3 { background-color: var(--color-p1-c3); }
+
+.bg-p2-c0 { background-color: transparent; }
+.bg-p2-c1 { background-color: var(--color-p2-c1); }
+.bg-p2-c2 { background-color: var(--color-p2-c2); }
+.bg-p2-c3 { background-color: var(--color-p2-c3); }
 
