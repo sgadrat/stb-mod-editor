@@ -52,14 +52,14 @@ button.icon.enabled {
 }
 
 #toolbar td {
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
   margin: 0;
   padding: 0;
   border: 2px solid transparent;
 }
 
-#toolbar td.active-color {
+#toolbar tr.active-color td {
   border: 2px solid red;
 }
 
@@ -134,4 +134,19 @@ div.sprite-info {
 .bgcolor1 { background-color: #888; }
 .bgcolor2 { background-color: #ccc; }
 .bgcolor3 { background-color: #fff; }
+
+.bg-p0c0 { background-color: var(--color-p0c0); }
+.bg-p0c1 { background-color: var(--color-p0c1); }
+.bg-p0c2 { background-color: var(--color-p0c2); }
+.bg-p0c3 { background-color: var(--color-p0c3); }
+
+.bg-p1c0 { background-color: var(--color-p1c0); }
+.bg-p1c1 { background-color: var(--color-p1c1); }
+.bg-p1c2 { background-color: var(--color-p1c2); }
+.bg-p1c3 { background-color: var(--color-p1c3); }
+
+.bg-p2c0 { background-color: var(--color-p2c0); }
+.bg-p2c1 { background-color: var(--color-p2c1); }
+.bg-p2c2 { background-color: var(--color-p2c2); }
+.bg-p2c3 { background-color: var(--color-p2c3); }
 

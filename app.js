@@ -23,8 +23,9 @@ const deleteCssRule = function(rule) {
   }
 }
 
+
 const NES_COLORS = [
-  '#7C7C7C',
+  null, //'#7C7C7C',
   '#0000FC',
   '#0000BC',
   '#4428BC',
@@ -173,18 +174,50 @@ class Utils {
 }
 
 
+class Conf {
+  color = 0;  // manually selected color
+  colorModifier = 0;  // color modified though keyboard modifiers
+  colorSwap = 0;  // index of color swap
+  zoom = 16;  // zoom value (display pixel per tile pixel)
+  tool = 'brush';  // active tool (brush, select)
+  grid = 'tiles';  // grid mode (off, tiles, pixels)
+
+  static ZOOM_LEVELS = [2, 4, 8, 16, 24, 32, 48];
+
+  drawColor() {
+    return this.color ^ this.colorModifier;
+  }
+
+  zoomStep(step) {
+    const LEVELS = this.constructor.ZOOM_LEVELS
+    const zoom = LEVELS.reduce((prev, cur) => (
+      Math.abs(cur - this.zoom) < Math.abs(prev - this.zoom) ? cur : prev
+    ));
+    let idx = LEVELS.indexOf(zoom) + step;
+    idx = Math.min(Math.max(idx, 0), LEVELS.length - 1);  // clamp
+    this.zoom = LEVELS[idx];
+  }
+
+  palettes(tree) {
+    return ['primary_colors', 'secondary_colors', 'alternate_colors'].map(k => (
+      tree.color_swaps[k][this.colorSwap].colors.map(v => NES_COLORS[v])
+    ));
+  }
+}
+
+
 const app = Vue.createApp({
   data() {
     return {
       tree: null,
+      conf: new Conf(),
     }
   },
 
   provide() {
     return {
       tree: Vue.computed(() => this.tree),
-      drawColor: Vue.computed(() => this.$refs.toolbar.drawColor()),
-      activeTool: Vue.computed(() => this.$refs.toolbar.tool),
+      conf: Vue.computed(() => this.conf),
     }
   },
 
@@ -195,16 +228,21 @@ const app = Vue.createApp({
     let style = document.createElement("style");
     document.head.appendChild(style);
     this.sheet = style.sheet;
-    this.updateZoomRule();
+    this.cssRules = {};
 
-    this.$watch("$refs.toolbar.zoom", () => this.updateZoomRule(), { immediate: true });
-    this.$watch("$refs.toolbar.grid", (val, _) => {
+    this.$watch('tree', () => {
+      this.updateColorSwapRule();
+    });
+
+    this.$watch('conf.colorSwap', () => this.updateColorSwapRule(), { immediate: true });
+    this.$watch('conf.zoom', () => this.updateZoomRule(), { immediate: true });
+    this.$watch('conf.grid', (val, _) => {
       const classes = this.$refs.content.classList;
       for (let x of ['off', 'tiles', 'pixels']) {
         classes.toggle('tool-grid-' + x, val === x);
       }
     }, { immediate: true });
-    this.$watch("$refs.toolbar.tool", (val, _) => {
+    this.$watch('conf.tool', (val, _) => {
       const classes = this.$refs.content.classList;
       for (let x of ['select', 'brush']) {
         classes.toggle('tool-' + x, val === x);
@@ -216,7 +254,7 @@ const app = Vue.createApp({
     // Setup handlers for changing color with Ctrl/Shift
     this.keymodifierHandle = (ev) => {
       if (ev.key === "Control" || ev.key === "Shift") {
-        this.$refs.toolbar.colorModifier = ev.ctrlKey + 2 * ev.shiftKey;
+        this.conf.colorModifier = ev.ctrlKey + 2 * ev.shiftKey;
       }
     }
     document.addEventListener('keydown', this.keymodifierHandle);
@@ -238,18 +276,31 @@ const app = Vue.createApp({
         .catch(err => console.error(err));
     },
 
-    updateZoomRule() {
-      const zoom = this.$refs.toolbar.zoom;
-      if (this.zoomRule !== undefined) {
-        deleteCssRule(this.zoomRule);
+    updateColorSwapRule() {
+      if (!this.tree) {
+        return;
       }
-      this.zoomRule = this.insertCssRule(`:root { --grid-zoom: ${zoom}px; }`);
+      const palettes = this.conf.palettes(this.tree);
+      let rules = [];
+      for (const [p, palette] of palettes.entries()) {
+        for (const [c, color] of palette.entries()) {
+          rules.push(`--color-p${p}c${c}: ${color};`);
+        }
+      }
+      this.setCssRule('palettes', `:root { ${rules.join('')} }`);
     },
 
-    // Insert a CSS rule and return it, as a CSSRule object
-    insertCssRule(text) {
+    updateZoomRule() {
+      this.setCssRule('zoom', `:root { --grid-zoom: ${this.conf.zoom}px; }`);
+    },
+
+    // Add or replace a CSS rule
+    setCssRule(name, text) {
+      if (this.cssRules[name] !== undefined) {
+        deleteCssRule(this.cssRules[name]);
+      }
       const i = this.sheet.insertRule(text);
-      return this.sheet.cssRules[i];
+      this.cssRules[name] = this.sheet.cssRules[i];
     },
 
     downloadAsJson() {
@@ -261,61 +312,38 @@ const app = Vue.createApp({
 
 
 app.component('toolbar', {
-  data() {
-    return {
-      baseColor: 0,
-      colorModifier: 0,
-      zoom: 16,
-      tool: 'brush',
-      grid: 'tiles',
-    }
-  },
+  props: ['conf'],
 
   methods: {
-    zoomIn() {
-      if (this.zoom * 2 <= 64) {
-        this.zoom *= 2;
-        console.debug("zoom in:", this.zoom);
-      }
-    },
-    zoomOut() {
-      if (this.zoom / 2 >= 4) {
-        this.zoom /= 2;
-        console.debug("zoom out:", this.zoom);
-      }
-    },
-
     changeGrid() {
-      if (this.grid == 'off') {
-        this.grid = 'tiles';
-      } else if (this.grid == 'tiles') {
-        this.grid = 'pixels';
+      if (this.conf.grid == 'off') {
+        this.conf.grid = 'tiles';
+      } else if (this.conf.grid == 'tiles') {
+        this.conf.grid = 'pixels';
       } else {
-        this.grid = 'off';
+        this.conf.grid = 'off';
       }
-    },
-
-    drawColor() {
-      return this.baseColor ^ this.colorModifier;
     },
   },
 
   template: `
     <table>
-      <tr v-for="c in [0, 1, 2, 3]">
-        <td
-          :class="['bgcolor'+(c || '-none'), { 'active-color': c === drawColor() }]"
-          @click="baseColor = c"
-         />
+      <tr
+        v-for="c in [0, 1, 2, 3]"
+        :class="{ 'active-color': c === conf.drawColor() }"
+        @click="conf.color = c"
+       >
+        <td :class="'bg-p0c'+c" />
+        <td :class="'bg-p1c'+c" />
       </tr>
     </table>
     <div>
-      <button class="icon" @click="zoomOut()" title="Zoom-out"><i class="fas fa-search-minus"/></button>
-      <button class="icon" @click="zoomIn()" title="Zoom in"><i class="fas fa-search-plus"/></button>
+      <button class="icon" @click="conf.zoomStep(-1)" title="Zoom-out"><i class="fas fa-search-minus"/></button>
+      <button class="icon" @click="conf.zoomStep(1)" title="Zoom in"><i class="fas fa-search-plus"/></button>
     </div>
     <div>
-      <button class="icon" @click="tool = 'brush'" :class="{ enabled: tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"/></button>
-      <button class="icon" @click="tool = 'select'" :class="{ enabled: tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
+      <button class="icon" @click="conf.tool = 'brush'" :class="{ enabled: conf.tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"/></button>
+      <button class="icon" @click="conf.tool = 'select'" :class="{ enabled: conf.tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
     </div>
     <button class="icon" @click="changeGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
   `,
@@ -324,7 +352,7 @@ app.component('toolbar', {
 
 app.component('stb-tiles', {
   props: ['tiles'],
-  inject: ['drawColor'],
+  inject: ['conf'],
 
   methods: {
     getTile(x, y) {
@@ -336,7 +364,7 @@ app.component('stb-tiles', {
     },
 
     drawPixel(x, y) {
-      this.getTile(x, y).representation[y % 8][x % 8] = this.drawColor.value;
+      this.getTile(x, y).representation[y % 8][x % 8] = this.conf.value.drawColor();
     },
 
     mouseMove(ev, x, y) {
@@ -362,7 +390,7 @@ app.component('stb-tiles', {
 
 app.component('stb-animation-frame', {
   props: ['frame'],
-  inject: ['tree', 'activeTool'],
+  inject: ['tree', 'conf'],
 
   data() {
     return {
@@ -416,8 +444,8 @@ app.component('stb-animation-frame', {
           :class="['frame-sprite', { selected: sprite === selectedSprite, foreground: sprite.foreground }]"
           :tiles.sync="[[spriteTile(sprite)]]"
           :style="spriteStyle(sprite)"
-          @click.capture="activeTool.value === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
-          @mousemove.capture="activeTool.value === 'select' && $event.stopPropagation()"
+          @click.capture="conf.value.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
+          @mousemove.capture="conf.value.tool === 'select' && $event.stopPropagation()"
           />
       </div>
     </div>
@@ -608,5 +636,6 @@ const router = VueRouter.createRouter({
 
 app.use(router);
 
+//TODO app.config.unwrapInjectedRef = true;
 app.mount('#app');
 
