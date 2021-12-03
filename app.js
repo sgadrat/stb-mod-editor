@@ -364,7 +364,7 @@ app.component('stb-tiles', {
     },
 
     drawPixel(x, y) {
-      this.getTile(x, y).representation[y % 8][x % 8] = this.conf.value.drawColor();
+      this.getTile(x, y).representation[y % 8][x % 8] = this.conf.drawColor();
     },
 
     mouseMove(ev, x, y) {
@@ -406,7 +406,7 @@ app.component('stb-animation-frame', {
 
   methods: {
     spriteTile(sprite) {
-      const tileset = this.tree.value.tileset;
+      const tileset = this.tree.tileset;
       const idx = tileset.tilenames.indexOf(sprite.tile);
       return tileset.tiles[idx];
     },
@@ -444,8 +444,8 @@ app.component('stb-animation-frame', {
           :class="['frame-sprite', { selected: sprite === selectedSprite, foreground: sprite.foreground }]"
           :tiles.sync="[[spriteTile(sprite)]]"
           :style="spriteStyle(sprite)"
-          @click.capture="conf.value.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
-          @mousemove.capture="conf.value.tool === 'select' && $event.stopPropagation()"
+          @click.capture="conf.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
+          @mousemove.capture="conf.tool === 'select' && $event.stopPropagation()"
           />
       </div>
     </div>
@@ -473,7 +473,7 @@ app.component('stb-frame-thumbnail', {
   methods: {
     drawFrame() {
       const ctx = this.$refs.canvas.getContext('2d');
-      return Utils.drawFrame(ctx, this.tree.value, this.frame, { zoom: 2 });
+      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2 });
     },
   },
 
@@ -497,13 +497,13 @@ const IllustrationsTab = {
   },
 
   template: `
-    <div v-if="tree.value" class="tab-illustrations">
+    <div v-if="tree" class="tab-illustrations">
       <h2>Token</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.value.illustration_token, 1, 1)" class="bgcolor-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_token, 1, 1)" class="bgcolor-none" />
       <h2>Small </h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.value.illustration_small, 2, 2)" class="bgcolor-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_small, 2, 2)" class="bgcolor-none" />
       <h2>Large</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.value.illustration_large, 6, 8)" class="bgcolor-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_large, 6, 8)" class="bgcolor-none" />
     </div>
   `,
 }
@@ -515,11 +515,10 @@ const TilesetTab = {
   methods: {
     //XXX Needed?
     tileAnimations(i) {
-      const tree = this.tree.value;
-      const name = tree.tileset.tilenames[i];
+      const name = this.tree.tileset.tilenames[i];
       const useTile = anim => anim.frames.some(frame => frame.sprites.some(sprite => sprite.tile === name));
-      let animations = tree.animations.filter(useTile);
-      for (const item of Object.values(tree)) {
+      let animations = this.tree.animations.filter(useTile);
+      for (const item of Object.values(this.tree)) {
         if (item.type === 'animation' && useTile(item)) {
           animations.push(item);
         }
@@ -529,9 +528,9 @@ const TilesetTab = {
   },
 
   template: `
-    <div v-if="tree.value" class="tab-tileset">
+    <div v-if="tree" class="tab-tileset">
       <h2>Tileset</h2>
-      <div class="tileset-tile" v-for="(tile, i) in tree.value.tileset.tiles">
+      <div class="tileset-tile" v-for="(tile, i) in tree.tileset.tiles">
         <stb-tiles :tiles.sync="[[tile]]" class="bgcolor-none" />
         <!-- XXX
         <ul class="tileset-tile-users">
@@ -552,10 +551,10 @@ const AnimationsTab = {
 
   //TODO include mandatory animations?
   template: `
-    <div v-if="tree.value">
+    <div v-if="tree">
       <h2>Animations</h2>
       <ul>
-        <li v-for="anim in tree.value.animations">
+        <li v-for="anim in tree.animations">
           <router-link :to="'/animations/'+anim.name">{{ anim.name }}</router-link>
         </li>
       </ul>
@@ -576,14 +575,14 @@ const AnimationTab = {
 
   created() {
     this.$watch(() => this.$route.params, () => this.updateAnimation());
-    this.$watch('tree.value', () => this.updateAnimation());
+    this.$watch('tree', () => this.updateAnimation());
     this.updateAnimation();
   },
  
   methods: {
     updateAnimation() {
-      if (this.tree.value) {
-        this.animation = this.tree.value.animations.find(anim => anim.name === this.$route.params.name);
+      if (this.tree) {
+        this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
       }
     },
   },
@@ -636,6 +635,6 @@ const router = VueRouter.createRouter({
 
 app.use(router);
 
-//TODO app.config.unwrapInjectedRef = true;
+app.config.unwrapInjectedRef = true;
 app.mount('#app');
 
