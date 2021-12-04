@@ -152,12 +152,12 @@ div.sprite-info {
   margin: 0.5em;
 }
 
-.bgcolor-none { background-color: #222; }
-
 .bg-default-c0 { background-color: transparent; }
 .bg-default-c1 { background-color: #888; }
 .bg-default-c2 { background-color: #ccc; }
 .bg-default-c3 { background-color: #fff; }
+
+.bg-none { background-color: var(--color-none); }
 
 .bg-p0-c0 { background-color: transparent; }
 .bg-p0-c1 { background-color: var(--color-p0-c1); }

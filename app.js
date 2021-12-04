@@ -12,6 +12,24 @@ const downloadJson = function(data, filename) {
   document.body.removeChild(a);
 }
 
+// Pick a color picker using browsers's built-in dialog
+const pickColor = function(value, setter) {
+  const input = document.createElement('input');
+  input.type = 'color';
+  // use the input itself to "resolve" the color
+  input.style.color = value;
+  input.value = rgb2hex(input.style.color);
+  input.style.display = 'none';
+
+  input.addEventListener('change', () => {
+    setter(input.value);
+  });
+
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
+}
+
 // Remove a CSSRule
 const deleteCssRule = function(rule) {
   let rules = rule.parentStyleSheet.cssRules;
@@ -23,6 +41,14 @@ const deleteCssRule = function(rule) {
   }
 }
 
+// Convert a CSS-style rgb color to an hex color
+const rgb2hex = function(rgb) {
+  return '#' + (rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/)
+    .slice(1)
+    .map(n => parseInt(n, 10).toString(16).padStart(2, '0'))
+    .join('')
+  );
+}
 
 const NES_COLORS = [
   null, //'#7C7C7C',
@@ -127,7 +153,7 @@ class Utils {
     return tileset.tiles[idx];
   }
 
-  static drawFrame(ctx, tree, frame, { zoom = 1, background = '#222', palettes }) {
+  static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes }) {
     const rect = this.frameRect(frame);
     ctx.canvas.width = rect.width * zoom;
     ctx.canvas.height = rect.height * zoom;
@@ -180,6 +206,7 @@ class Conf {
   color = 0;  // manually selected color
   colorModifier = 0;  // color modified though keyboard modifiers
   colorSwap = 0;  // index of color swap
+  bgColor = '#80ffff';  // background color, for transparency
   zoom = 16;  // zoom value (display pixel per tile pixel)
   tool = 'brush';  // active tool (brush, select)
   grid = 'tiles';  // grid mode (off, tiles, pixels)
@@ -235,6 +262,7 @@ const app = Vue.createApp({
     });
 
     this.$watch('conf.colorSwap', () => this.updateColorSwapRule(), { immediate: true });
+    this.$watch('conf.bgColor', () => this.updateBgColorRule(), { immediate: true });
     this.$watch('conf.zoom', () => this.updateZoomRule(), { immediate: true });
     this.$watch('conf.grid', (val, _) => {
       const classes = this.$refs.content.classList;
@@ -290,6 +318,10 @@ const app = Vue.createApp({
       this.setCssRule('palettes', `:root { ${rules.join('')} }`);
     },
 
+    updateBgColorRule() {
+      this.setCssRule('bgcolor', `:root { --color-none: ${this.conf.bgColor}; }`);
+    },
+
     updateZoomRule() {
       this.setCssRule('zoom', `:root { --grid-zoom: ${this.conf.zoom}px; }`);
     },
@@ -335,6 +367,12 @@ app.component('toolbar', {
     colorSwapPalettes() {
       return Utils.getAllPalettes(this.tree);
     },
+
+    pickBackgroundColor() {
+      pickColor(this.conf.bgColor, (color) => {
+        this.conf.bgColor = color;
+      });
+    },
   },
 
   template: `
@@ -344,11 +382,14 @@ app.component('toolbar', {
         :class="{ 'active-color': c === conf.drawColor() }"
         @click="conf.color = c"
        >
-        <td :class="'bg-p0-c'+c" />
-        <td :class="'bg-p1-c'+c" />
+        <td :class="c == 0 ? 'bg-none' : 'bg-p0-c'+c" />
+        <td :class="c == 0 ? 'bg-none' : 'bg-p1-c'+c" />
       </tr>
     </table>
-    <button class="icon" @click="palettePicker = !palettePicker" title="Palette selection"><i class="fas fa-palette"/></button>
+    <div>
+      <button class="icon" @click="palettePicker = !palettePicker" title="Palette selection"><i class="fas fa-palette"/></button>
+      <button class="icon" @click="pickBackgroundColor()" title="Background color"><i class="fas fa-image"/></button>
+    </div>
     <div class="palette-picker" v-if="palettePicker">
       <table v-if="tree" v-for="(palettes, swap) of colorSwapPalettes()" @click="conf.colorSwap = swap; palettePicker = false">
         <tr v-for="i in [0, 1, 2]">
@@ -461,7 +502,7 @@ app.component('stb-animation-frame', {
     <div class="animation-frame">
       <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
       <div class="frame-canvas">
-        <table class="canvas-grid background bgcolor-none">
+        <table class="canvas-grid background bg-none">
           <tr v-for="y in Array(rect.height).keys()">
             <td v-for="x in Array(rect.width).keys()" />
           </tr>
@@ -502,7 +543,7 @@ app.component('stb-frame-thumbnail', {
     drawFrame() {
       const ctx = this.$refs.canvas.getContext('2d');
       const palettes = this.conf.palettes(this.tree);
-      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2, palettes });
+      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2, background: this.conf.bgColor, palettes });
     },
   },
 
@@ -528,11 +569,11 @@ const IllustrationsTab = {
   template: `
     <div v-if="tree" class="tab-illustrations">
       <h2>Token</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_token, 1, 1)" class="bgcolor-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_token, 1, 1)" class="bg-none" />
       <h2>Small </h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_small, 2, 2)" class="bgcolor-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_small, 2, 2)" class="bg-none" />
       <h2>Large</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_large, 6, 8)" class="bgcolor-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_large, 6, 8)" class="bg-none" />
     </div>
   `,
 }
@@ -560,7 +601,7 @@ const TilesetTab = {
     <div v-if="tree" class="tab-tileset">
       <h2>Tileset</h2>
       <div class="tileset-tile" v-for="(tile, i) in tree.tileset.tiles">
-        <stb-tiles :tiles.sync="[[tile]]" class="bgcolor-none" />
+        <stb-tiles :tiles.sync="[[tile]]" class="bg-none" />
         <!-- XXX
         <ul class="tileset-tile-users">
           <li v-for="anim in tileAnimations(i)">{{ anim.name }}</li>
