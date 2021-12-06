@@ -139,6 +139,12 @@ class Utils {
       bottom = Math.max(bottom, frame.hurtbox.bottom);
     }
 
+    // make sure it includes the (Y-shifted) origin
+    left = Math.min(left, 0);
+    right = Math.max(right, 0);
+    top = Math.min(top, 16);
+    bottom = Math.max(bottom, 16);
+
     return {
       x: left,
       y: top,
@@ -210,6 +216,7 @@ class Conf {
   zoom = 16;  // zoom value (display pixel per tile pixel)
   tool = 'brush';  // active tool (brush, select)
   grid = 'tiles';  // grid mode (off, tiles, pixels)
+  boxes = 'on';  // hitbox/hurtbox mode (off, on)
 
   static ZOOM_LEVELS = [2, 4, 8, 16, 24, 32, 48];
 
@@ -268,6 +275,12 @@ const app = Vue.createApp({
       const classes = this.$refs.content.classList;
       for (let x of ['off', 'tiles', 'pixels']) {
         classes.toggle('tool-grid-' + x, val === x);
+      }
+    }, { immediate: true });
+    this.$watch('conf.boxes', (val, _) => {
+      const classes = this.$refs.content.classList;
+      for (let x of ['off', 'on']) {
+        classes.toggle('tool-boxes-' + x, val === x);
       }
     }, { immediate: true });
     this.$watch('conf.tool', (val, _) => {
@@ -364,6 +377,14 @@ app.component('toolbar', {
       }
     },
 
+    changeBoxes() {
+      if (this.conf.boxes == 'off') {
+        this.conf.boxes = 'on';
+      } else {
+        this.conf.boxes = 'off';
+      }
+    },
+
     colorSwapPalettes() {
       return Utils.getAllPalettes(this.tree);
     },
@@ -406,7 +427,10 @@ app.component('toolbar', {
       <button class="icon" @click="conf.tool = 'brush'" :class="{ enabled: conf.tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"/></button>
       <button class="icon" @click="conf.tool = 'select'" :class="{ enabled: conf.tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
     </div>
-    <button class="icon" @click="changeGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
+    <div>
+      <button class="icon" @click="changeGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
+      <button class="icon" @click="changeBoxes()" :class="{ enabled: conf.boxes === 'on' }" title="Hitbox/hurtbox"><i class="fas fa-vector-square"/></button>
+    </div>
   `,
 });
 
@@ -472,6 +496,17 @@ app.component('stb-animation-frame', {
     },
   },
 
+  mounted() {
+    this.$watch('frame.hurtbox.left', (newval, oldval) => { if (this.frame.hurtbox && newval > this.frame.hurtbox.right) this.frame.hurtbox.left = oldval });
+    this.$watch('frame.hurtbox.top', (newval, oldval) => { if (this.frame.hurtbox && newval > this.frame.hurtbox.bottom) this.frame.hurtbox.top = oldval });
+    this.$watch('frame.hurtbox.right', (newval, oldval) => { if (this.frame.hurtbox && newval < this.frame.hurtbox.left) this.frame.hurtbox.right = oldval });
+    this.$watch('frame.hurtbox.bottom', (newval, oldval) => { if (this.frame.hurtbox && newval < this.frame.hurtbox.top) this.frame.hurtbox.bottom = oldval });
+    this.$watch('frame.hitbox.left', (newval, oldval) => { if (this.frame.hitbox && newval > this.frame.hitbox.right) this.frame.hitbox.left = oldval });
+    this.$watch('frame.hitbox.top', (newval, oldval) => { if (this.frame.hitbox && newval > this.frame.hitbox.bottom) this.frame.hitbox.top = oldval });
+    this.$watch('frame.hitbox.right', (newval, oldval) => { if (this.frame.hitbox && newval < this.frame.hitbox.left) this.frame.hitbox.right = oldval });
+    this.$watch('frame.hitbox.bottom', (newval, oldval) => { if (this.frame.hitbox && newval < this.frame.hitbox.top) this.frame.hitbox.bottom = oldval });
+  },
+
   methods: {
     spriteTile(sprite) {
       const tileset = this.tree.tileset;
@@ -489,18 +524,110 @@ app.component('stb-animation-frame', {
       const sy = sprite.attr & 0x80 ? -1 : 1;
 
       return {
-        position: 'absolute',
         left: `calc(${x} * var(--grid-zoom))`,
         top: `calc(${y} * var(--grid-zoom))`,
         //TODO Borders are not symmetrical (1px is odd), so this create artifacts
         transform: `scale(${sx},${sy})`,
       }
     },
+
+    hurtboxStyle() {
+      const x = this.frame.hurtbox.left - this.rect.x;
+      const y = this.frame.hurtbox.top -this.rect.y;
+      const w = this.frame.hurtbox.right - this.frame.hurtbox.left;
+      const h = this.frame.hurtbox.bottom - this.frame.hurtbox.top;
+      return {
+        left: `calc(${x} * var(--grid-zoom))`,
+        top: `calc(${y} * var(--grid-zoom))`,
+        width: `calc(${w} * var(--grid-zoom))`,
+        height: `calc(${h} * var(--grid-zoom))`,
+      }
+    },
+
+    boxStyle(box) {
+      const x = box.left - this.rect.x;
+      const y = box.top -this.rect.y;
+      const w = box.right - box.left;
+      const h = box.bottom - box.top;
+      return {
+        left: `calc(${x} * var(--grid-zoom))`,
+        top: `calc(${y} * var(--grid-zoom))`,
+        width: `calc(${w} * var(--grid-zoom))`,
+        height: `calc(${h} * var(--grid-zoom))`,
+      }
+    },
+
+    originStyle() {
+      const x = -this.rect.x;
+      const y = -this.rect.y;
+      return {
+        left: `calc((${x} - 0.2) * var(--grid-zoom))`,
+        top: `calc((${y} + 16 - 0.2) * var(--grid-zoom))`,
+        width: `calc(0.4 * var(--grid-zoom))`,
+        height: `calc(0.4 * var(--grid-zoom))`,
+      }
+    },
+
+    toggleHurtbox(value) {
+      if ((this.frame.hurtbox !== null) === value) {
+        return;  // no changes
+      }
+      if (value) {
+        this.frame.hurtbox = {
+          type: 'animation_hurtbox',
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+        };
+      } else {
+        this.frame.hurtbox = null;
+      }
+    },
+
+    toggleHitbox(value) {
+      if ((this.frame.hitbox !== null) === value) {
+        return;  // no changes
+      }
+      if (value) {
+        this.frame.hitbox = {
+          type: 'animation_hitbox',
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          //TODO
+          base_h: 0,
+          base_v: 0,
+          force_h: 0,
+          force_v: 0,
+          damages: 1,
+          enabled: true,
+        };
+      } else {
+        this.frame.hitbox = null;
+      }
+    },
+
+    setHurtboxCoord(name, value) {
+      console.log("hurtbox", name, value);
+      let box = this.frame.hurtbox;
+      if (name == 'left') {
+        if (value > box.right) return;
+      } else if (name == 'top') {
+        if (value > box.bottom) return;
+      } if (name == 'right') {
+        if (value < box.left) return;
+      } else if (name == 'bottom') {
+        if (value < box.top) return;
+      }
+      console.log("set value");
+      box[name] = value;
+    },
   },
 
   template: `
     <div class="animation-frame">
-      <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
       <div class="frame-canvas">
         <table class="canvas-grid background bg-none">
           <tr v-for="y in Array(rect.height).keys()">
@@ -516,6 +643,32 @@ app.component('stb-animation-frame', {
           @click.capture="conf.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
           @mousemove.capture="conf.tool === 'select' && $event.stopPropagation()"
           />
+        <div v-if="frame.hitbox" class="frame-hitbox" :style="boxStyle(frame.hitbox)" />
+        <div v-if="frame.hurtbox" class="frame-hurtbox" :style="boxStyle(frame.hurtbox)" />
+        <div class="frame-origin" :style="originStyle()"/>
+      </div>
+      <div class="frame-info">
+        <div><label><input type="checkbox" :checked="frame.hurtbox !== null" @change="toggleHurtbox($event.target.checked)" /> Hurtbox</label></div>
+        <div v-if="frame.hurtbox !== null">
+          <label>X0: <input v-model="frame.hurtbox.left" type="number" class="coordinate" /></label><br/>
+          <label>Y0: <input v-model="frame.hurtbox.top" type="number" class="coordinate" /></label><br/>
+          <label>X1: <input v-model="frame.hurtbox.right" type="number" class="coordinate" /></label><br/>
+          <label>Y1: <input v-model="frame.hurtbox.bottom" type="number" class="coordinate" /></label><br/>
+        </div>
+        <div><label><input type="checkbox" :checked="frame.hitbox !== null" @change="toggleHitbox($event.target.checked)" /> Hitbox</label></div>
+        <div v-if="frame.hitbox !== null">
+          <label>X0: <input v-model="frame.hitbox.left" type="number" class="coordinate" /></label><br/>
+          <label>Y0: <input v-model="frame.hitbox.top" type="number" class="coordinate" /></label><br/>
+          <label>X1: <input v-model="frame.hitbox.right" type="number" class="coordinate" /></label><br/>
+          <label>Y1: <input v-model="frame.hitbox.bottom" type="number" class="coordinate" /></label><br/>
+          <label>Damages: <input v-model="frame.hitbox.damages" type="number" class="damages" /></label><br/>
+          <label>Base H: <input v-model="frame.hitbox.base_h" type="number" class="force" /></label><br/>
+          <label>Base V: <input v-model="frame.hitbox.base_v" type="number" class="force" /></label><br/>
+          <label>Force H: <input v-model="frame.hitbox.force_h" type="number" class="force" /></label><br/>
+          <label>Force V: <input v-model="frame.hitbox.force_v" type="number" class="force" /></label><br/>
+          <label><input type="checkbox" v-model="frame.hitbox.enabled" /> Enabled</label><br/>
+        </div>
+        <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
       </div>
     </div>
   `,
@@ -526,8 +679,8 @@ app.component('stb-sprite-info', {
 
   template: `
     <div class="sprite-info">
-      <label>X: <input v-model="sprite.x" type="number" style="width: 3.5em;"/></label>
-      <label>Y: <input v-model="sprite.y" type="number" style="width: 3.5em;"/></label>
+      <label>X: <input v-model="sprite.x" type="number" class="coordinate" /></label>
+      <label>Y: <input v-model="sprite.y" type="number" class="coordinate" /></label>
       <button class="icon" @click="sprite.attr ^= 0x40" :class="{ enabled: sprite.attr & 0x40 }" title="Horizontal flip"><i class="fas fa-arrows-alt-h"/></button>
       <button class="icon" @click="sprite.attr ^= 0x80" :class="{ enabled: sprite.attr & 0x80 }" title="Vertical flip"><i class="fas fa-arrows-alt-v"/></button>
       <button class="icon" @click="sprite.foreground = !sprite.foreground" :class="{ enabled: sprite.foreground }" title="Foreground"><i class="fas fa-layer-group"/></button>

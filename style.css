@@ -20,7 +20,6 @@
 #content {
   flex: 1;
   margin: 1em 0.5em;
-  background-color: #88f; /*XXX*/
 }
 
 #toolbar {
@@ -47,6 +46,10 @@ button.icon.enabled {
   background-color: #bbb;
   border: 2px solid #444;
 }
+
+input.coordinate { width: 3.5em; }
+input.force { width: 4em; }
+input.damages { width: 3em; }
 
 #toolbar table {
   background-color: #000;
@@ -121,6 +124,10 @@ table.canvas-grid.background {
   box-sizing: content-box;
 }
 
+.frame-sprite {
+  position: absolute;
+}
+
 .frame-sprite.foreground {
   z-index: 10;
 }
@@ -134,13 +141,56 @@ table.canvas-grid.background {
 table.canvas-grid.frame-sprite.selected { border: 2px solid blue; }
 .tool-grid-off table.canvas-grid.frame-sprite { border: 1px solid transparent; }
 
+.frame-hurtbox {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #00ff0080;
+  background: #80ff8080;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.frame-hitbox {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #ff000080;
+  background: #ff808080;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.tool-boxes-off .frame-hurtbox { display: none; }
+.tool-boxes-off .frame-hitbox { display: none; }
+
+.frame-origin {
+  position: absolute;
+  background: #f00;
+  border-radius: 50%;
+  z-index: 30;
+}
+
+.tool-grid-off .frame-origin {
+  display: none;
+}
+
 
 div.animation-frame {
+  display: flex;
   margin-top: 1em;
 }
 
 div.frame-canvas {
+  flex: 0 0 fit-content;
   position: relative;
+  background-color: #88f; /*XXX*/
+}
+
+
+
+div.frame-info {
+  flex: 1 1;
+  margin-left: 2em;
+  background-color: #f88;
 }
 
 div.sprite-info {
@@ -149,6 +199,7 @@ div.sprite-info {
 }
 
 .frame-thumbnail {
+  border: 1px solid black;
   margin: 0.5em;
 }
 
