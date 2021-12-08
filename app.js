@@ -648,6 +648,9 @@ app.component('stb-animation-frame', {
         <div class="frame-origin" :style="originStyle()"/>
       </div>
       <div class="frame-info">
+        <div>
+          <label>Duration: <input v-model="frame.duration" type="number" style="width: 3em" /> frames</label>
+        </div>
         <div><label><input type="checkbox" :checked="frame.hurtbox !== null" @change="toggleHurtbox($event.target.checked)" /> Hurtbox</label></div>
         <div v-if="frame.hurtbox !== null">
           <label>X0: <input v-model="frame.hurtbox.left" type="number" class="coordinate" /></label><br/>
@@ -661,7 +664,7 @@ app.component('stb-animation-frame', {
           <label>Y0: <input v-model="frame.hitbox.top" type="number" class="coordinate" /></label><br/>
           <label>X1: <input v-model="frame.hitbox.right" type="number" class="coordinate" /></label><br/>
           <label>Y1: <input v-model="frame.hitbox.bottom" type="number" class="coordinate" /></label><br/>
-          <label>Damages: <input v-model="frame.hitbox.damages" type="number" class="damages" /></label><br/>
+          <label>Damages: <input v-model="frame.hitbox.damages" type="number" class="damages" /> %</label><br/>
           <label>Base H: <input v-model="frame.hitbox.base_h" type="number" class="force" /></label><br/>
           <label>Base V: <input v-model="frame.hitbox.base_v" type="number" class="force" /></label><br/>
           <label>Force H: <input v-model="frame.hitbox.force_h" type="number" class="force" /></label><br/>
@@ -769,9 +772,6 @@ const TilesetTab = {
 const AnimationsTab = {
   inject: ['tree'],
 
-  methods: {
-  },
-
   //TODO include mandatory animations?
   template: `
     <div v-if="tree">
@@ -805,12 +805,20 @@ const AnimationTab = {
   methods: {
     updateAnimation() {
       if (this.tree) {
+        console.log("XXX: update animation");
         this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
+        const frame = this.$route.params.frame;
+        if (frame !== undefined) {
+          this.selectedFrame = this.animation.frames[frame];
+        }
       }
+    },
+
+    updateFrame(idx) {
+      this.$router.replace(`/animations/${this.animation.name}/${idx}`);
     },
   },
 
-  //TODO frame selector
   template: `
     <div v-if="animation">
       <h2>Animation</h2>
@@ -819,9 +827,10 @@ const AnimationTab = {
       </div>
       <div>
         <stb-frame-thumbnail
-          v-for="frame of animation.frames"
+          v-for="(frame, idx) in animation.frames"
           :frame="frame"
-          @click="selectedFrame = frame"
+          @click="updateFrame(idx)"
+          :class="{ selected: selectedFrame === frame }"
          />
       </div>
       <div>
@@ -848,6 +857,7 @@ const routes = [
   { path: '/tileset', component: TilesetTab },
   { path: '/animations', component: AnimationsTab },
   { path: '/animations/:name', component: AnimationTab },
+  { path: '/animations/:name/:frame', component: AnimationTab },
   { path: '/help', component: HelpTab },
 ]
 
