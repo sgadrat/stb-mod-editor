@@ -117,6 +117,8 @@ const NES_COLORS = [
   '#000000',
 ]
 
+const PALETTE_NAMES = ['primary_colors', 'secondary_colors', 'alternate_colors']
+
 class Utils {
   static frameRect(frame) {
     const sprites_x = frame.sprites.map(s => s.x);
@@ -197,7 +199,7 @@ class Utils {
   }
 
   static getPalettes(tree, swap) {
-    return ['primary_colors', 'secondary_colors', 'alternate_colors'].map(k => (
+    return PALETTE_NAMES.map(k => (
       tree.color_swaps[k][swap].colors.map(v => NES_COLORS[v])
     ));
   }
@@ -264,11 +266,8 @@ const app = Vue.createApp({
     this.sheet = style.sheet;
     this.cssRules = {};
 
-    this.$watch('tree', () => {
-      this.updateColorSwapRule();
-    });
+    Vue.watchEffect(() => this.updateColorSwapRule());
 
-    this.$watch('conf.colorSwap', () => this.updateColorSwapRule(), { immediate: true });
     this.$watch('conf.bgColor', () => this.updateBgColorRule(), { immediate: true });
     this.$watch('conf.zoom', () => this.updateZoomRule(), { immediate: true });
     this.$watch('conf.grid', (val, _) => {
@@ -397,7 +396,7 @@ app.component('toolbar', {
   },
 
   template: `
-    <table>
+    <table class="color-picker">
       <tr
         v-for="c in [0, 1, 2, 3]"
         :class="{ 'active-color': c === conf.drawColor() }"
@@ -686,6 +685,7 @@ app.component('stb-sprite-info', {
       <label>Y: <input v-model="sprite.y" type="number" class="coordinate" /></label>
       <button class="icon" @click="sprite.attr ^= 0x40" :class="{ enabled: sprite.attr & 0x40 }" title="Horizontal flip"><i class="fas fa-arrows-alt-h"/></button>
       <button class="icon" @click="sprite.attr ^= 0x80" :class="{ enabled: sprite.attr & 0x80 }" title="Vertical flip"><i class="fas fa-arrows-alt-v"/></button>
+      <button class="icon" @click="sprite.attr ^= 0x01" :class="{ enabled: sprite.attr & 0x01 }" title="Palette"><i class="fas fa-palette"/></button>
       <button class="icon" @click="sprite.foreground = !sprite.foreground" :class="{ enabled: sprite.foreground }" title="Foreground"><i class="fas fa-layer-group"/></button>
     </div>
   `,
@@ -841,6 +841,92 @@ const AnimationTab = {
 }
 
 
+const ColorsTab = {
+  inject: ['tree'],
+
+  data() {
+    return {
+      selectedSwap: null,
+      selectedPalette: 0,
+      selectedColor: 1,
+    }
+  },
+
+  methods: {
+    colorSwapPalettes() {
+      return Utils.getAllPalettes(this.tree);
+    },
+
+    fullPaletteCellStyle(i, j) {
+      return {
+        'background-color': NES_COLORS[16 * i + j] || 'black',
+      }
+    },
+
+    setSelectedSwapColor(i, j) {
+      const k = PALETTE_NAMES[this.selectedPalette];
+      this.tree.color_swaps[k][this.selectedSwap].colors[this.selectedColor] = 16 * i + j;
+    },
+  },
+
+  computed: {
+    selectedSwapPalettes() {
+      return Utils.getPalettes(this.tree, this.selectedSwap);
+    },
+
+    selectedSwapColor() {
+      if (this.selectedSwap === null) {
+        return null;
+      }
+      const k = PALETTE_NAMES[this.selectedPalette];
+      return this.tree.color_swaps[k][this.selectedSwap].colors[this.selectedColor];
+    },
+  },
+
+  template: `
+    <div v-if="tree" class="color-swaps">
+      <h2>Color swaps</h2>
+      <div class="palette-picker">
+        <table v-for="(palettes, swap) of colorSwapPalettes()"
+          @click="selectedSwap = swap"
+         >
+          <tr v-for="c in [0, 1, 2]">
+            <td v-for="p in [0, 1, 2]" :style="{ 'background-color': palettes[p][c] || 'black' }" />
+          </tr>
+        </table>
+      </div>
+      <div class="selected-swap">
+        <div class="color-picker">
+          <table v-if="selectedSwap !== null">
+            <tr v-for="c in [0, 1, 2]">
+              <td v-for="p in [0, 1, 2]"
+                :style="{ 'background-color': selectedSwapPalettes[p][c] }"
+                :class="{ selected: p == selectedPalette && c == selectedColor }"
+                @click="selectedPalette = p; selectedColor = c"
+               />
+            </tr>
+          </table>
+        </div>
+        <div class="full-palette">
+          <table>
+            <tr v-for="(_, i) in 4">
+              <td v-for="(_, j) in 16"
+                :style="fullPaletteCellStyle(i, j)"
+                :class="{ selected: selectedSwapColor === 16*i+j }"
+                @click="setSelectedSwapColor(i, j)"
+               >
+                <template v-if="i + j === 0"><i class="fas fa-image" /></template>
+                <template v-else>{{ (16*i+j).toString(16).padStart(2, '0') }}</template>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  `,
+}
+
+
 const HelpTab = {
   template: `
     <ul>
@@ -858,6 +944,7 @@ const routes = [
   { path: '/animations', component: AnimationsTab },
   { path: '/animations/:name', component: AnimationTab },
   { path: '/animations/:name/:frame', component: AnimationTab },
+  { path: '/colors/', component: ColorsTab },
   { path: '/help', component: HelpTab },
 ]
 

@@ -51,11 +51,11 @@ input.coordinate { width: 3.5em; }
 input.force { width: 4em; }
 input.damages { width: 3em; }
 
-#toolbar table {
+#toolbar table.color-picker {
   background-color: #000;
 }
 
-#toolbar td {
+#toolbar .color-picker td {
   width: 25px;
   height: 25px;
   margin: 0;
@@ -63,11 +63,11 @@ input.damages { width: 3em; }
   border: 2px solid transparent;
 }
 
-#toolbar tr.active-color td {
+#toolbar .color-picker tr.active-color td {
   border: 2px solid red;
 }
 
-.palette-picker {
+#toolbar .palette-picker {
   position: absolute;
   display: flex;
   border: 1px solid black;
@@ -75,18 +75,78 @@ input.damages { width: 3em; }
   width: max-content;
 }
 
-#toolbar .palette-picker table {
+.palette-picker table {
   border-collapse: collapse;
   margin: 2px;
   border: 1px solid black;
 }
 
-#toolbar .palette-picker td {
+.palette-picker td {
   width: 20px;
   height: 20px;
   margin: 0;
   padding: 0;
   border: none;
+}
+
+.color-swaps .palette-picker {
+  display: flex;
+}
+
+.color-swaps .palette-picker table {
+  border: 2px solid black;
+}
+
+.color-swaps .selected-swap {
+  display: flex;
+  margin-top: 1em;
+}
+
+.color-swaps .color-picker {
+  border-collapse: collapse;
+  margin: 5px;
+  flex: 0 0 150px;
+}
+
+.color-swaps .color-picker table {
+  background-color: #000;
+  padding: 2px;
+}
+
+.color-swaps .color-picker td {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid transparent;
+}
+
+.color-swaps .color-picker td.selected {
+  border: 2px solid red;
+}
+
+.color-swaps .full-palette table {
+  border-collapse: collapse;
+}
+
+.color-swaps .full-palette td {
+  width: 3em;
+  height: 3em;
+  text-align: center;
+  font-family: monospace;
+  user-select: none;
+  padding: 0;
+  border: none;
+}
+
+.color-swaps .full-palette td.selected {
+  outline: 2px solid red;
+  outline-offset: -2px;
+}
+
+.color-swaps .full-palette i.fas {
+  font-size: 130%;
+  color: white;
 }
 
 
@@ -184,8 +244,6 @@ div.frame-canvas {
   position: relative;
   background-color: #88f; /*XXX*/
 }
-
-
 
 div.frame-info {
   flex: 1 1;
