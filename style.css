@@ -251,9 +251,33 @@ div.frame-info {
   background-color: #f88;
 }
 
+.frame-info .box-header {
+  margin-top: 0.5em;
+  font-weight: bold;
+}
+
+.frame-info hr {
+  border: none;
+  border-top: 1px solid #444;
+}
+
 div.sprite-info {
   vertical-align: middle;
   background-color: #f88; /*TODO*/
+}
+
+.sprite-tile-picker {
+  margin-top: 0.5em;
+  line-height: 0;
+}
+
+.sprite-tile-picker .tile-thumbnail {
+  border: 1px solid black;
+  margin: 0.1em;
+}
+
+.sprite-tile-picker .tile-thumbnail.selected {
+  outline: 2px solid red;
 }
 
 .frame-thumbnail {
@@ -261,7 +285,7 @@ div.sprite-info {
   margin: 0.5em;
 }
 .frame-thumbnail.selected {
-  border: 2px solid green;
+  outline: 2px solid red;
 }
 
 .bg-default-c0 { background-color: transparent; }

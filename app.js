@@ -161,6 +161,31 @@ class Utils {
     return tileset.tiles[idx];
   }
 
+  static drawSingleTile(ctx, tree, tile, { zoom = 1, palette, x = 0, y = 0, flip_x = false, flip_y = false }) {
+    for (let [yy, row] of tile.representation.entries()) {
+      for (let [xx, value] of row.entries()) {
+        if (value === 0) {
+          continue;  // transparent, don't draw
+        }
+        const pixel_x = x + (flip_x ? 7-xx : xx);
+        const pixel_y = y + (flip_y ? 7-yy : yy);
+
+        ctx.fillStyle = palette[value-1];
+        ctx.fillRect(pixel_x * zoom, pixel_y * zoom, zoom, zoom);
+      }
+    }
+  }
+
+  static drawTile(ctx, tree, tile, { zoom = 1, background, palette }) {
+    ctx.canvas.width = 8 * zoom;
+    ctx.canvas.height = 8 * zoom;
+
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 8 * zoom, 8 * zoom);
+
+    this.drawSingleTile(ctx, tree, tile, { zoom, palette })
+  }
+
   static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes }) {
     const rect = this.frameRect(frame);
     ctx.canvas.width = rect.width * zoom;
@@ -172,19 +197,10 @@ class Utils {
     const drawSpriteTile = (sprite, x, y) => {
       const tile = this.getTileByName(tree, sprite.tile);
       const palette = palettes[sprite.attr & 0x1];
-      for (let [yy, row] of tile.representation.entries()) {
-        for (let [xx, value] of row.entries()) {
-          if (value === 0) {
-            continue;  // transparent, don't draw
-          }
-          const pixel_x = x + (sprite.attr & 0x40 ? 7-xx : xx);
-          const pixel_y = y + (sprite.attr & 0x80 ? 7-yy : yy);
-
-          ctx.fillStyle = palette[value-1];
-          ctx.fillRect(pixel_x * zoom, pixel_y * zoom, zoom, zoom);
-        }
-      }
-    };
+      const flip_x = sprite.attr & 0x40;
+      const flip_y = sprite.attr & 0x80;
+      this.drawSingleTile(ctx, tree, tile, { zoom, palette, x, y, flip_x, flip_y })
+    }
 
     for (let sprite of frame.sprites) {
       if (!sprite.foreground) {
@@ -609,7 +625,6 @@ app.component('stb-animation-frame', {
     },
 
     setHurtboxCoord(name, value) {
-      console.log("hurtbox", name, value);
       let box = this.frame.hurtbox;
       if (name == 'left') {
         if (value > box.right) return;
@@ -620,7 +635,6 @@ app.component('stb-animation-frame', {
       } else if (name == 'bottom') {
         if (value < box.top) return;
       }
-      console.log("set value");
       box[name] = value;
     },
   },
@@ -650,26 +664,29 @@ app.component('stb-animation-frame', {
         <div>
           <label>Duration: <input v-model="frame.duration" type="number" style="width: 3em" /> frames</label>
         </div>
-        <div><label><input type="checkbox" :checked="frame.hurtbox !== null" @change="toggleHurtbox($event.target.checked)" /> Hurtbox</label></div>
-        <div v-if="frame.hurtbox !== null">
-          <label>X0: <input v-model="frame.hurtbox.left" type="number" class="coordinate" /></label><br/>
-          <label>Y0: <input v-model="frame.hurtbox.top" type="number" class="coordinate" /></label><br/>
-          <label>X1: <input v-model="frame.hurtbox.right" type="number" class="coordinate" /></label><br/>
-          <label>Y1: <input v-model="frame.hurtbox.bottom" type="number" class="coordinate" /></label><br/>
+        <div class="box-header">
+          <label><input type="checkbox" :checked="frame.hurtbox !== null" @change="toggleHurtbox($event.target.checked)" /> Hurtbox</label>
         </div>
-        <div><label><input type="checkbox" :checked="frame.hitbox !== null" @change="toggleHitbox($event.target.checked)" /> Hitbox</label></div>
+        <div v-if="frame.hurtbox !== null">
+          Area: (<input v-model="frame.hurtbox.left" type="number" class="coordinate" />,<input v-model="frame.hurtbox.top" type="number" class="coordinate" />)
+          to (<input v-model="frame.hurtbox.right" type="number" class="coordinate" />,<input v-model="frame.hurtbox.bottom" type="number" class="coordinate" />)
+        </div>
+        <div class="box-header">
+          <label><input type="checkbox" :checked="frame.hitbox !== null" @change="toggleHitbox($event.target.checked)" /> Hitbox</label>
+        </div>
         <div v-if="frame.hitbox !== null">
-          <label>X0: <input v-model="frame.hitbox.left" type="number" class="coordinate" /></label><br/>
-          <label>Y0: <input v-model="frame.hitbox.top" type="number" class="coordinate" /></label><br/>
-          <label>X1: <input v-model="frame.hitbox.right" type="number" class="coordinate" /></label><br/>
-          <label>Y1: <input v-model="frame.hitbox.bottom" type="number" class="coordinate" /></label><br/>
-          <label>Damages: <input v-model="frame.hitbox.damages" type="number" class="damages" /> %</label><br/>
-          <label>Base H: <input v-model="frame.hitbox.base_h" type="number" class="force" /></label><br/>
-          <label>Base V: <input v-model="frame.hitbox.base_v" type="number" class="force" /></label><br/>
-          <label>Force H: <input v-model="frame.hitbox.force_h" type="number" class="force" /></label><br/>
-          <label>Force V: <input v-model="frame.hitbox.force_v" type="number" class="force" /></label><br/>
+          Area: (<input v-model="frame.hitbox.left" type="number" class="coordinate" />,<input v-model="frame.hitbox.top" type="number" class="coordinate" />)
+          to (<input v-model="frame.hitbox.right" type="number" class="coordinate" />,<input v-model="frame.hitbox.bottom" type="number" class="coordinate" />)
+          <br/>
+          <label>Damages: <input v-model="frame.hitbox.damages" type="number" class="damages" /> %</label>
+          <br/>
+          Base knockback: (<input v-model="frame.hitbox.base_h" type="number" class="force" />,<input v-model="frame.hitbox.base_v" type="number" class="force" />)
+          <br/>
+          Knockback scaling: (<input v-model="frame.hitbox.force_h" type="number" class="force" />,<input v-model="frame.hitbox.force_v" type="number" class="force" />) per %
+          <br/>
           <label><input type="checkbox" v-model="frame.hitbox.enabled" /> Enabled</label><br/>
         </div>
+        <hr/>
         <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
       </div>
     </div>
@@ -678,15 +695,23 @@ app.component('stb-animation-frame', {
 
 app.component('stb-sprite-info', {
   props: ['sprite'],
+  inject: ['tree'],
 
   template: `
     <div class="sprite-info">
-      <label>X: <input v-model="sprite.x" type="number" class="coordinate" /></label>
-      <label>Y: <input v-model="sprite.y" type="number" class="coordinate" /></label>
+      Position: (<input v-model="sprite.x" type="number" class="coordinate" />,<input v-model="sprite.y" type="number" class="coordinate" />)
+      <br/>
       <button class="icon" @click="sprite.attr ^= 0x40" :class="{ enabled: sprite.attr & 0x40 }" title="Horizontal flip"><i class="fas fa-arrows-alt-h"/></button>
       <button class="icon" @click="sprite.attr ^= 0x80" :class="{ enabled: sprite.attr & 0x80 }" title="Vertical flip"><i class="fas fa-arrows-alt-v"/></button>
       <button class="icon" @click="sprite.attr ^= 0x01" :class="{ enabled: sprite.attr & 0x01 }" title="Palette"><i class="fas fa-palette"/></button>
       <button class="icon" @click="sprite.foreground = !sprite.foreground" :class="{ enabled: sprite.foreground }" title="Foreground"><i class="fas fa-layer-group"/></button>
+      <div class="sprite-tile-picker">
+        <stb-tile-thumbnail v-for="(name, idx) in tree.tileset.tilenames"
+          :tile="tree.tileset.tiles[idx]"
+          @click="sprite.tile = name; tilePicker = false"
+          :class="{ selected: sprite.tile === name }"
+         />
+      </div>
     </div>
   `,
 });
@@ -709,6 +734,27 @@ app.component('stb-frame-thumbnail', {
 
   template: `
     <canvas ref="canvas" class="frame-thumbnail" />
+  `,
+});
+
+app.component('stb-tile-thumbnail', {
+  props: ['tile'],
+  inject: ['tree', 'conf'],
+
+  methods: {
+    drawTile() {
+      const ctx = this.$refs.canvas.getContext('2d');
+      const palette = this.conf.palettes(this.tree)[0];
+      return Utils.drawTile(ctx, this.tree, this.tile, { zoom: 4, background: this.conf.bgColor, palette });
+    },
+  },
+
+  mounted() {
+    Vue.watchEffect(() => this.drawTile());
+  },
+
+  template: `
+    <canvas ref="canvas" class="tile-thumbnail" />
   `,
 });
 
@@ -805,7 +851,6 @@ const AnimationTab = {
   methods: {
     updateAnimation() {
       if (this.tree) {
-        console.log("XXX: update animation");
         this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
         const frame = this.$route.params.frame;
         if (frame !== undefined) {
