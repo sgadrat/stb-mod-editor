@@ -41,6 +41,11 @@ const deleteCssRule = function(rule) {
   }
 }
 
+// Deep clone data using JSON serialization
+const cloneData = function(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
 // Convert a CSS-style rgb color to an hex color
 const rgb2hex = function(rgb) {
   return '#' + (rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/)
@@ -611,7 +616,6 @@ app.component('stb-animation-frame', {
           top: 0,
           right: 0,
           bottom: 0,
-          //TODO
           base_h: 0,
           base_v: 0,
           force_h: 0,
@@ -637,6 +641,17 @@ app.component('stb-animation-frame', {
       }
       box[name] = value;
     },
+
+    newSprite() {
+      this.frame.sprites.push({
+        type: 'animation_sprite',
+        tile: this.tree.tileset.tilenames[0],
+        attr: 0,
+        foreground: false,
+        x: 0,
+        y: 0,
+      });
+    }
   },
 
   template: `
@@ -685,6 +700,9 @@ app.component('stb-animation-frame', {
           Knockback scaling: (<input v-model="frame.hitbox.force_h" type="number" class="force" />,<input v-model="frame.hitbox.force_v" type="number" class="force" />) per %
           <br/>
           <label><input type="checkbox" v-model="frame.hitbox.enabled" /> Enabled</label><br/>
+        </div>
+        <div>
+          <button class="icon" @click="newSprite()" title="Add new sprite"><i class="fas fa-plus-square"/></button>
         </div>
         <hr/>
         <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
@@ -862,6 +880,40 @@ const AnimationTab = {
     updateFrame(idx) {
       this.$router.replace(`/animations/${this.animation.name}/${idx}`);
     },
+
+    newFrame() {
+      const frames = this.animation.frames;
+      frames.push({
+        type: 'animation_frame',
+        duration: 1,
+        sprites: [],
+        hitbox: null,
+        hurtbox: null,
+      });
+      this.updateFrame(frames.length-1);
+    },
+
+    dragFrame(ev, idx) {
+      console.log(`DRAG start: ${idx}`);
+      ev.dataTransfer.dropEffect = 'move';
+      ev.dataTransfer.effectAllowed = 'copyMove';
+      ev.dataTransfer.setData('idx', idx);
+    },
+
+    dropFrame(ev, dst) {
+      const src = parseInt(ev.dataTransfer.getData('idx'));
+      const frames = this.animation.frames;
+      if (src !== dst) {
+        frames.splice(dst, 0, frames[src]);
+        frames.splice(src < dst ? src : src + 1, 1);
+      }
+    },
+
+    dropNewFrame(ev) {
+      const src = parseInt(ev.dataTransfer.getData('idx'));
+      const frames = this.animation.frames;
+      frames.push(cloneData(frames[src]));
+    },
   },
 
   template: `
@@ -870,16 +922,34 @@ const AnimationTab = {
       <div>
         <label>Name: <input v-model="animation.name" style="width: 40%;"/></label>
       </div>
-      <div>
-        <stb-frame-thumbnail
-          v-for="(frame, idx) in animation.frames"
-          :frame="frame"
-          @click="updateFrame(idx)"
-          :class="{ selected: selectedFrame === frame }"
-         />
+      <div class="frame-thumbnails">
+        <template v-for="(frame, idx) in animation.frames">
+          <div class="dragdrop-divider"
+            @drop="dropFrame($event, idx)"
+            @dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
+            ></div>
+          <stb-frame-thumbnail
+            :frame="frame"
+            :class="{ selected: selectedFrame === frame }"
+            @click="updateFrame(idx)"
+            draggable="true"
+            @dragstart="dragFrame($event, idx)"
+           />
+        </template>
+        <div class="dragdrop-divider"
+          @drop="dropFrame($event, idx)"
+          @dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
+         ></div>
+        <div class="frame-thumbnails-new"
+          @click="newFrame()"
+          @drop="dropNewFrame($event)"
+          @dragover.prevent="$event.dataTransfer.dropEffect = 'copy'"
+         >
+          <i class="fas fa-plus-square" />
+        </div>
       </div>
       <div>
-        <stb-animation-frame v-if="selectedFrame" :frame="selectedFrame" />
+        <stb-animation-frame v-if="selectedFrame" :frame="selectedFrame" draggable />
       </div>
     </div>
   `,
