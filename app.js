@@ -279,7 +279,7 @@ const app = Vue.createApp({
   },
 
   mounted() {
-    this.fetchCharacterData();
+    this.fetchCharacterData('data/sinbad.json');  //TODO change default
 
     // Setup stylesheet for dynamic styling
     let style = document.createElement("style");
@@ -328,13 +328,18 @@ const app = Vue.createApp({
   },
 
   methods: {
-    fetchCharacterData() {
-      console.debug("fetch character data");
+    fetchCharacterData(url) {
+      console.debug(`fetch character data: ${url}`);
       //TODO update URL, use local storage
-      fetch('sample.json')
+      fetch(url)
         .then(response => response.json())
         .then(data => { this.tree = data })
         .catch(err => console.error(err));
+    },
+
+    loadCharacterData(url) {
+      this.fetchCharacterData(url);
+      this.$router.push('/');
     },
 
     updateColorSwapRule() {
@@ -870,9 +875,17 @@ const AnimationTab = {
     updateAnimation() {
       if (this.tree) {
         this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
+        if (this.animation === undefined) {
+          this.$router.push('/animations');
+          return;
+        }
         const frame = this.$route.params.frame;
         if (frame !== undefined) {
           this.selectedFrame = this.animation.frames[frame];
+          if (this.selectedFrame === undefined) {
+            this.selectedFrame = null;
+            this.$router.replace(`/animations/${this.animation.name}`);
+          }
         }
       }
     },

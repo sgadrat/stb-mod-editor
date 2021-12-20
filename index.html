@@ -12,7 +12,11 @@
     <div id="app">
       <div id="tree">
         <div>
-          <input type="button" value="Download JSON" @click="downloadAsJson()" />
+          <input type="button" value="Download JSON" @click="downloadAsJson()" /><br/>
+          <input v-for="name in ['sinbad', 'kiki', 'pepper']"
+            type="button" :value="name"
+            @click="loadCharacterData('data/'+name+'.json')"
+            />
         </div>
         <ul>
           <li><router-link to="/illustrations">Illustrations</router-link></li>
