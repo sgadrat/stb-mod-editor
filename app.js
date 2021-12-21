@@ -56,71 +56,72 @@ const rgb2hex = function(rgb) {
 }
 
 const NES_COLORS = [
-  null, //'#7C7C7C',
-  '#0000FC',
-  '#0000BC',
-  '#4428BC',
-  '#940084',
-  '#A80020',
-  '#A81000',
-  '#881400',
-  '#503000',
-  '#007800',
-  '#006800',
-  '#005800',
-  '#004058',
+  '#747474',
+  '#24188C',
+  '#0000A8',
+  '#44009C',
+  '#8C0074',
+  '#A80010',
+  '#A40000',
+  '#7C0800',
+  '#402C00',
+  '#004400',
+  '#005000',
+  '#003C14',
+  '#183C5C',
   '#000000',
   '#000000',
   '#000000',
   '#BCBCBC',
-  '#0078F8',
-  '#0058F8',
-  '#6844FC',
-  '#D800CC',
+  '#0070EC',
+  '#2038EC',
+  '#8000F0',
+  '#BC00BC',
   '#E40058',
-  '#F83800',
-  '#E45C10',
-  '#AC7C00',
-  '#00B800',
+  '#D82800',
+  '#C84C0C',
+  '#887000',
+  '#009400',
   '#00A800',
-  '#00A844',
-  '#008888',
+  '#009038',
+  '#008088',
   '#000000',
   '#000000',
   '#000000',
-  '#F8F8F8',
+  '#FCFCFC',
   '#3CBCFC',
-  '#6888FC',
-  '#9878F8',
-  '#F878F8',
-  '#F85898',
-  '#F87858',
-  '#FCA044',
-  '#F8B800',
-  '#B8F818',
-  '#58D854',
+  '#5C94FC',
+  '#CC88FC',
+  '#F478FC',
+  '#FC74B4',
+  '#FC7460',
+  '#FC9838',
+  '#F0BC3C',
+  '#80D010',
+  '#4CDC48',
   '#58F898',
   '#00E8D8',
   '#787878',
   '#000000',
   '#000000',
   '#FCFCFC',
-  '#A4E4FC',
-  '#B8B8F8',
-  '#D8B8F8',
-  '#F8B8F8',
-  '#F8A4C0',
-  '#F0D0B0',
-  '#FCE0A8',
-  '#F8D878',
-  '#D8F878',
-  '#B8F8B8',
-  '#B8F8D8',
-  '#00FCFC',
-  '#F8D8F8',
+  '#A8E4FC',
+  '#C4D4FC',
+  '#D4C8FC',
+  '#FCC4FC',
+  '#FCC4D8',
+  '#FCBCB0',
+  '#FCD8A8',
+  '#FCE4A0',
+  '#E0FCA0',
+  '#A8F0BC',
+  '#B0FCCC',
+  '#9CFCF0',
+  '#C4C4C4',
   '#000000',
   '#000000',
 ]
+
 
 const PALETTE_NAMES = ['primary_colors', 'secondary_colors', 'alternate_colors']
 
@@ -235,7 +236,7 @@ class Conf {
   color = 0;  // manually selected color
   colorModifier = 0;  // color modified though keyboard modifiers
   colorSwap = 0;  // index of color swap
-  bgColor = '#80ffff';  // background color, for transparency
+  bgColor = '#3CBCFC';  // background color, for transparency
   zoom = 16;  // zoom value (display pixel per tile pixel)
   tool = 'brush';  // active tool (brush, select)
   grid = 'tiles';  // grid mode (off, tiles, pixels)
@@ -794,11 +795,11 @@ const IllustrationsTab = {
   template: `
     <div v-if="tree" class="tab-illustrations">
       <h2>Token</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_token, 1, 1)" class="bg-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_token, 1, 1)" palette="illu-token" class="bg-none" />
       <h2>Small </h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_small, 2, 2)" class="bg-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_small, 2, 2)" palette="illu-small" class="bg-none" />
       <h2>Large</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_large, 6, 8)" class="bg-none" />
+      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_large, 6, 8)" palette="illu-large" class="bg-none" />
     </div>
   `,
 }
