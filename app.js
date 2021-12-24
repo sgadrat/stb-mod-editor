@@ -461,28 +461,22 @@ app.component('toolbar', {
 });
 
 
-app.component('stb-tiles', {
-  props: {
-    tiles: {},
-    palette: {default: 'default'}
-  },
+app.component('stb-tile', {
+  props: ['tile', 'palette', 'flip'],
   inject: ['conf'],
 
   methods: {
     getColorClass(x, y) {
-      return `bg-${this.palette}-c${this.getPixel(x, y)}`;
-    },
-
-    getTile(x, y) {
-      return this.tiles[Math.floor(y / 8)][Math.floor(x / 8)];
-    },
-
-    getPixel(x, y) {
-      return this.getTile(x, y).representation[y % 8][x % 8];
+      const px = this.flip?.[0] ? 7 - x : x;
+      const py = this.flip?.[1] ? 7 - y : y;
+      const pixel = this.tile.representation[py][px];
+      return `bg-${this.palette}-c${pixel}`;
     },
 
     drawPixel(x, y) {
-      this.getTile(x, y).representation[y % 8][x % 8] = this.conf.drawColor();
+      const px = this.flip?.[0] ? 7 - x : x;
+      const py = this.flip?.[1] ? 7 - y : y;
+      this.tile.representation[py][px] = this.conf.drawColor();
     },
 
     mouseMove(ev, x, y) {
@@ -493,15 +487,35 @@ app.component('stb-tiles', {
   },
 
   template: `
-    <table class="canvas-grid">
-      <tr v-for="y in Array(tiles.length * 8).keys()">
-        <td v-for="x in Array(tiles[0].length * 8).keys()"
+    <table class="stb-tile">
+      <tr v-for="(_, y) in 8">
+        <td v-for="(_, x) in 8"
           :class="getColorClass(x, y)"
           @mousemove="mouseMove($event, x, y)"
           @click="drawPixel(x, y)"
          />
       </tr>
     </table>
+  `,
+});
+
+app.component('stb-illustration', {
+  props: ['tiles', 'width', 'height', 'palette'],
+  inject: ['conf'],
+
+  methods: {
+    getStyle() {
+      return {
+        'grid-template-columns': `repeat(${this.width}, max-content)`,
+        'grid-template-rows': `repeat(${this.height}, max-content)`,
+      }
+    },
+  },
+
+  template: `
+    <div class="stb-illustration" :style="getStyle()">
+      <stb-tile v-for="tile in tiles" :tile.sync="tile" :palette="palette" />
+    </div>
   `,
 });
 
@@ -546,14 +560,9 @@ app.component('stb-animation-frame', {
       const x8 = Math.floor(x / 8);
       const y8 = Math.floor(y / 8);
 
-      const sx = sprite.attr & 0x40 ? -1 : 1;
-      const sy = sprite.attr & 0x80 ? -1 : 1;
-
       return {
         left: `calc(${x} * var(--grid-zoom))`,
         top: `calc(${y} * var(--grid-zoom))`,
-        //TODO Borders are not symmetrical (1px is odd), so this create artifacts
-        transform: `scale(${sx},${sy})`,
       }
     },
 
@@ -663,15 +672,18 @@ app.component('stb-animation-frame', {
   template: `
     <div class="animation-frame">
       <div class="frame-canvas">
-        <table class="canvas-grid background bg-none">
-          <tr v-for="y in Array(rect.height).keys()">
-            <td v-for="x in Array(rect.width).keys()" />
+        <table class="stb-tile background bg-none">
+          <tr v-for="y in rect.height">
+            <td v-for="x in rect.width"
+              @click.capture="conf.tool === 'select' && (selectedSprite = null, $event.stopPropagation())"
+             />
           </tr>
         </table>
-        <stb-tiles
+        <stb-tile
           v-for="sprite of frame.sprites"
           :class="['frame-sprite', { selected: sprite === selectedSprite, foreground: sprite.foreground }]"
-          :tiles.sync="[[spriteTile(sprite)]]"
+          :tile.sync="spriteTile(sprite)"
+          :flip="[sprite.attr & 0x40, sprite.attr & 0x80]"
           :palette="'p' + (sprite.attr & 0x1)"
           :style="spriteStyle(sprite)"
           @click.capture="conf.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
@@ -795,11 +807,11 @@ const IllustrationsTab = {
   template: `
     <div v-if="tree" class="tab-illustrations">
       <h2>Token</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_token, 1, 1)" palette="illu-token" class="bg-none" />
+      <stb-illustration :tiles.sync="tree.illustration_token.tiles" width="1" height="1" palette="illu-token" />
       <h2>Small </h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_small, 2, 2)" palette="illu-small" class="bg-none" />
+      <stb-illustration :tiles.sync="tree.illustration_small.tiles" width="2" height="2" palette="illu-small" />
       <h2>Large</h2> 
-      <stb-tiles :tiles.sync="illustrationTiles(tree.illustration_large, 6, 8)" palette="illu-large" class="bg-none" />
+      <stb-illustration :tiles.sync="tree.illustration_large.tiles" width="6" height="8" palette="illu-large" />
     </div>
   `,
 }
@@ -826,13 +838,15 @@ const TilesetTab = {
   template: `
     <div v-if="tree" class="tab-tileset">
       <h2>Tileset</h2>
-      <div class="tileset-tile" v-for="(tile, i) in tree.tileset.tiles">
-        <stb-tiles :tiles.sync="[[tile]]" class="bg-none" />
-        <!-- XXX
-        <ul class="tileset-tile-users">
-          <li v-for="anim in tileAnimations(i)">{{ anim.name }}</li>
-        </ul>
-        -->
+      <div class="tileset-tiles">
+        <div class="tileset-tile" v-for="(tile, i) in tree.tileset.tiles">
+          <stb-tile :tile.sync="tile" palette="p0" class="bg-none" />
+          <!-- XXX
+          <ul class="tileset-tile-users">
+            <li v-for="anim in tileAnimations(i)">{{ anim.name }}</li>
+          </ul>
+          -->
+        </div>
       </div>
     </div>
   `,
