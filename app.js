@@ -124,6 +124,7 @@ const NES_COLORS = [
 
 
 const PALETTE_NAMES = ['primary_colors', 'secondary_colors', 'alternate_colors']
+const MANDATORY_ANIMATION_NAMES = ['menu_select_animation', 'defeat_animation', 'victory_animation']
 
 class Utils {
   static frameRect(frame) {
@@ -159,6 +160,15 @@ class Utils {
       width: right - left + 1,
       height: bottom - top + 1,
     }
+  }
+
+  static getAnimationByName(tree, name) {
+    for (let k of MANDATORY_ANIMATION_NAMES) {
+      if (tree[k].name == name) {
+        return tree[k];
+      }
+    }
+    return tree.animations.find(anim => anim.name === name);
   }
 
   static getTileByName(tree, name) {
@@ -692,6 +702,8 @@ app.component('stb-animation-frame', {
     dragSpriteOver(ev, effect) {
       if (ev.dataTransfer.getData('group') === 'sprite') {
         ev.dataTransfer.dropEffect = effect;
+      } else {
+        ev.dataTransfer.dropEffect = 'none';
       }
     },
 
@@ -947,11 +959,19 @@ const TilesetTab = {
 const AnimationsTab = {
   inject: ['tree'],
 
-  //TODO include mandatory animations?
+  methods: {
+    getMandatoryAnimations() {
+      return MANDATORY_ANIMATION_NAMES.map(x => this.tree[x]);
+    },
+  },
+
   template: `
     <div v-if="tree">
       <h2>Animations</h2>
       <ul>
+        <li v-for="anim in getMandatoryAnimations()">
+          <router-link :to="'/animations/'+anim.name">{{ anim.name }}</router-link>
+        </li>
         <li v-for="anim in tree.animations">
           <router-link :to="'/animations/'+anim.name">{{ anim.name }}</router-link>
         </li>
@@ -985,7 +1005,7 @@ const AnimationTab = {
       if (!this.$route.path.startsWith('/animations')) {
         return;
       }
-      this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
+      this.animation = Utils.getAnimationByName(this.tree, this.$route.params.name);
       if (this.animation === undefined) {
         this.$router.push('/animations');
         return;
@@ -1033,6 +1053,8 @@ const AnimationTab = {
     dragFrameOver(ev, effect) {
       if (ev.dataTransfer.getData('group') === 'frame') {
         ev.dataTransfer.dropEffect = effect;
+      } else {
+        ev.dataTransfer.dropEffect = 'none';
       }
     },
 
