@@ -388,6 +388,38 @@ div.sprite-info {
 .bg-illu-large-c3 { background-color: #C4C4C4; }
 
 
+ul.code-states {
+  list-style-type: none;
+  padding: 0.2em;
+}
+
+textarea.sourcecode {
+  width: 100%;
+  min-height: 600px;
+}
+
+.stb-state input {
+  width: 30em;
+}
+
+.stb-state ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0.2em 0 0.5em 2em;
+}
+.stb-state li label {
+  display: flex;
+  width: 30%;
+  min-width: 40em;
+  padding: 0.1em;
+}
+.stb-state li span {
+  flex: 1;
+}
+.stb-state li input {
+  flex: 3;
+}
+
 #help i.fas {
   font-size: 90%;
   vertical-align: baseline;

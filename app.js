@@ -897,6 +897,31 @@ app.component('stb-sprite-thumbnail', {
   `,
 });
 
+app.component('stb-state', {
+  props: ['state'],
+  emits: ['delete'],
+
+  data() {
+    return {
+      unroll: false,
+    }
+  },
+
+  template: `
+    <div class="stb-state">
+      <i class="fas fa-chevron-down" @click="unroll = !unroll" /> <input v-model="state.name" /> <i class="fas fa-trash-alt" @click="$emit('delete')" />
+      <ul v-show="unroll">
+        <li><label><span>Start routine:</span> <input v-model="state.start_routine" /></label></li>
+        <li><label><span>Update routine:</span> <input v-model="state.update_routine" /></label></li>
+        <li><label><span>Input routine:</span> <input v-model="state.input_routine" /></label></li>
+        <li><label><span>On ground routine:</span> <input v-model="state.onground_routine" /></label></li>
+        <li><label><span>Off ground routine:</span> <input v-model="state.offground_routine" /></label></li>
+        <li><label><span>On hurt routine:</span> <input v-model="state.onhurt_routine" /></label></li>
+      </ul>
+    </div>
+  `,
+});
+
 
 const IllustrationsTab = {
   inject: ['tree'],
@@ -1207,6 +1232,51 @@ const ColorsTab = {
 }
 
 
+const CodeTab = {
+  inject: ['tree'],
+
+  methods: {
+    newState() {
+      this.tree.states.push({
+        type: 'character_state',
+        name: 'STATE_NAME',
+        start_routine: 'dummy_routine',
+        update_routine: 'dummy_routine',
+        input_routine: 'dummy_routine',
+        onground_routine: 'dummy_routine',
+        offground_routine: 'dummy_routine',
+        onhurt_routine: 'hurt_player',
+      });
+    },
+
+    removeState(idx) {
+      this.tree.states.splice(idx, 1);
+    },
+  },
+
+  template: `
+    <div v-if="tree">
+      <h2>Source code</h2>
+      <div>
+        <label>Net load routine: <input v-model="tree.netload_routine" style="width: 40%" /></label>
+      </div>
+      <div>
+        <h3>States</h3>
+        <ul class="code-states">
+          <li v-for="(state, idx) of tree.states" :key="state">
+            <stb-state :state="state" @delete="removeState(idx)" />
+          </li>
+          <li><i class="fas fa-plus-square" @click="newState()" /></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Source code</h2>
+        <textarea class="sourcecode" v-model="tree.sourcecode" />
+      </div>
+    </div>
+  `,
+}
+
 const HelpTab = {
   template: `
     <ul id="help">
@@ -1271,6 +1341,7 @@ const routes = [
   { path: '/animations/:name', component: AnimationTab },
   { path: '/animations/:name/:frame', component: AnimationTab },
   { path: '/colors/', component: ColorsTab },
+  { path: '/code/', component: CodeTab },
   { path: '/help', component: HelpTab },
 ]
 
