@@ -185,15 +185,24 @@ table.stb-tile td {
 
 .tileset-tiles {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
+  line-height: 0;
 }
 
-.tileset-tile {
-  outline: 2px solid black;
+.selected-tile .stb-tile {
+  outline: 3px solid black;
   outline-offset: -1px;
   width: fit-content;
   margin: 0.3em;
 }
+
+.tileset-tiles-new {
+  font-size: 32px;
+  width: 48px;
+  text-align: center;
+}
+
 
 .frame-canvas {
   outline: 2px solid black;
@@ -301,12 +310,12 @@ div.sprite-info {
   line-height: 0;
 }
 
-.sprite-tile-picker .stb-tile-thumbnail {
+.stb-tile-thumbnail {
   border: 1px solid black;
   margin: 0.1em;
 }
 
-.sprite-tile-picker .stb-tile-thumbnail.selected {
+.stb-tile-thumbnail.selected {
   outline: 2px solid red;
 }
 

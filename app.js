@@ -826,6 +826,7 @@ app.component('stb-sprite-info', {
       <div class="sprite-tile-picker">
         <stb-tile-thumbnail v-for="(name, idx) in tree.tileset.tilenames"
           :tile="tree.tileset.tiles[idx]"
+          :zoom="4"
           @click="sprite.tile = name; tilePicker = false"
           :class="{ selected: sprite.tile === name }"
          />
@@ -856,14 +857,14 @@ app.component('stb-frame-thumbnail', {
 });
 
 app.component('stb-tile-thumbnail', {
-  props: ['tile'],
+  props: ['tile', 'zoom'],
   inject: ['tree', 'conf'],
 
   methods: {
     drawTile() {
       const ctx = this.$refs.canvas.getContext('2d');
       const palette = this.conf.palettes(this.tree)[0];
-      return Utils.drawTile(ctx, this.tree, this.tile, { zoom: 4, background: this.conf.bgColor, palette });
+      return Utils.drawTile(ctx, this.tree, this.tile, { zoom: this.zoom, background: this.conf.bgColor, palette });
     },
   },
 
@@ -923,6 +924,70 @@ app.component('stb-state', {
 });
 
 
+app.component('dnd-list', {
+  props: ['items', 'group', 'direction'],
+  emits: ['move'],
+
+  methods: {
+    dragStart(ev, idx) {
+      ev.dataTransfer.dropEffect = 'move';
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('idx', idx);
+      ev.dataTransfer.setData('group', this.group);
+    },
+
+    dragOver(ev) {
+      if (ev.dataTransfer.getData('group') === this.group) {
+        ev.dataTransfer.dropEffect = 'move';
+        //TODO change display
+      } else {
+        ev.dataTransfer.dropEffect = 'none';
+      }
+    },
+
+    drop(ev, idx) {
+      if (ev.dataTransfer.getData('group') === this.group) {
+        if (!this.isMouseOnFirstHalf(ev)) {
+          idx += 1;
+        }
+        const src = parseInt(ev.dataTransfer.getData('idx'));
+        this.moveItem(src, idx);
+      }
+    },
+
+    moveItem(src, dst) {
+      if (src !== dst) {
+        this.items.splice(dst, 0, this.items[src]);
+        this.items.splice(src < dst ? src : src + 1, 1);
+        this.$emit('move', src, dst);
+      }
+    },
+
+    // Return whether mouse points in the "first" half of the target element
+    isMouseOnFirstHalf(ev) {
+      if (this.direction === 'horizontal') {
+        return ev.offsetX < ev.target.offsetWidth / 2;
+      } else {
+        return ev.offsetY < ev.target.offsetHeight / 2;
+      }
+    },
+  },
+
+  template: `
+    <template v-for="(item, idx) of items">
+      <div
+        draggable="true"
+        @dragstart="dragStart($event, idx)"
+        @dragover.prevent="dragOver($event)"
+        @drop="drop($event, idx)"
+       >
+        <slot name="item" :item="item" />
+      </div>
+    </template>
+  `,
+});
+
+
 const IllustrationsTab = {
   inject: ['tree'],
 
@@ -948,18 +1013,36 @@ const IllustrationsTab = {
 const TilesetTab = {
   inject: ['tree'],
 
+  data() {
+    return {
+      selectedTile: null,
+    }
+  },
+
   methods: {
-    //XXX Needed?
-    tileAnimations(i) {
-      const name = this.tree.tileset.tilenames[i];
-      const useTile = anim => anim.frames.some(frame => frame.sprites.some(sprite => sprite.tile === name));
-      let animations = this.tree.animations.filter(useTile);
-      for (const item of Object.values(this.tree)) {
-        if (item.type === 'animation' && useTile(item)) {
-          animations.push(item);
+    moveTile(src, dst) {
+      const items = this.tree.tileset.tilenames;
+      items.splice(dst, 0, items[src]);
+      items.splice(src < dst ? src : src + 1, 1);
+    },
+
+    newTile() {
+      const tileset = this.tree.tileset;
+
+      const prefix = this.tree.name.toUpperCase() + '_TILE_';
+      let name = null;
+      for (let i = 0; ; ++i) {
+        name = prefix + i;
+        if (!tileset.tilenames.includes(name)) {
+          break;
         }
       }
-      return animations;
+
+      tileset.tilenames.push(name);
+      tileset.tiles.push({
+        type: 'tile',
+        representation: Array.from({length: 8}).map(_ => Array(8).fill(0)),
+      });
     },
   },
 
@@ -967,14 +1050,27 @@ const TilesetTab = {
     <div v-if="tree" class="tab-tileset">
       <h2>Tileset</h2>
       <div class="tileset-tiles">
-        <div class="tileset-tile" v-for="(tile, i) in tree.tileset.tiles">
-          <stb-tile :tile.sync="tile" palette="p0" class="bg-none" />
-          <!-- XXX
-          <ul class="tileset-tile-users">
-            <li v-for="anim in tileAnimations(i)">{{ anim.name }}</li>
-          </ul>
-          -->
+        <dnd-list
+          :items="tree.tileset.tiles"
+          group="tileset"
+          direction="horizontal"
+          @move="moveTile"
+         >
+          <template v-slot:item="props">
+            <stb-tile-thumbnail
+              :tile="props.item"
+              :zoom="6"
+              :class="{ selected: props.item === selectedTile }"
+              @click="selectedTile = props.item"
+             />
+          </template>
+        </dnd-list>
+        <div class="tileset-tiles-new" @click="newTile()">
+          <i class="fas fa-plus-square" />
         </div>
+      </div>
+      <div v-if="selectedTile" class="selected-tile">
+        <stb-tile :tile.sync="selectedTile" palette="p0" class="bg-none" />
       </div>
     </div>
   `,
