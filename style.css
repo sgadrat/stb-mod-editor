@@ -143,11 +143,6 @@ input.damages { width: 3em; }
   outline-offset: -2px;
 }
 
-.color-swaps .full-palette i.fas {
-  font-size: 130%;
-  color: white;
-}
-
 
 table.stb-tile {
   box-sizing: border-box;

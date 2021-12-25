@@ -1282,8 +1282,7 @@ const ColorsTab = {
     },
 
     fullPaletteCellStyle(i, j) {
-      const color = i == 0 && j == 0 ? 'black' : NES_COLORS[16 * i + j];
-      return { 'background-color': color }
+      return { 'background-color': NES_COLORS[16 * i + j] }
     },
 
     setSelectedSwapColor(i, j) {
@@ -1314,7 +1313,7 @@ const ColorsTab = {
           @click="selectedSwap = swap"
          >
           <tr v-for="c in [0, 1, 2]">
-            <td v-for="p in [0, 1, 2]" :style="{ 'background-color': palettes[p][c] || 'black' }" />
+            <td v-for="p in [0, 1, 2]" :style="{ 'background-color': palettes[p][c] }" />
           </tr>
         </table>
       </div>
@@ -1338,8 +1337,7 @@ const ColorsTab = {
                 :class="{ selected: selectedSwapColor === 16*i+j }"
                 @click="setSelectedSwapColor(i, j)"
                >
-                <template v-if="i + j === 0"><i class="fas fa-image" /></template>
-                <template v-else>{{ (16*i+j).toString(16).padStart(2, '0') }}</template>
+                {{ (16*i+j).toString(16).padStart(2, '0') }}
               </td>
             </tr>
           </table>
