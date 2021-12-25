@@ -1113,9 +1113,8 @@ const ColorsTab = {
     },
 
     fullPaletteCellStyle(i, j) {
-      return {
-        'background-color': NES_COLORS[16 * i + j] || 'black',
-      }
+      const color = i == 0 && j == 0 ? 'black' : NES_COLORS[16 * i + j];
+      return { 'background-color': color }
     },
 
     setSelectedSwapColor(i, j) {
