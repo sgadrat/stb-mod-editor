@@ -1066,6 +1066,10 @@ const AnimationTab = {
           frames.splice(dst, 0, frames[src]);
           frames.splice(src < dst ? src : src + 1, 1);
         }
+        if (this.selectedFrame) {
+          // Update the URL (index may have changed)
+          this.updateFrame(this.animation.frames.indexOf(this.selectedFrame));
+        }
       }
     },
 
