@@ -1183,10 +1183,56 @@ const ColorsTab = {
 
 const HelpTab = {
   template: `
-    <ul>
-      <li>Choose elements to edit from the left column</li>
-      <li>Click "Download JSON" button to download character data as JSON</li>
-      <li>When drawing, use Control and/or Shift to modify color bitmask</li>
+    <ul id="help">
+      <li>
+        General
+        <ul>
+          <li>Choose elements to edit from the left column</li>
+          <li>Changes to a tile will propagate to everything that uses it</li>
+        </ul>
+      </li>
+      <li>
+        Toolbar
+        <ul>
+          <li>The toolbar is the vertical panel on the left side</li>
+          <li>Use <i class="fas fa-paint-brush"/> tool to draw</li>
+          <li>Select drawing color from the palette</li>
+          <li>When drawing, use Control and/or Shift to modify color bitmask</li>
+          <li>Use <i class="fas fa-palette"/> to change palette used for display and drawing</li>
+          <li>Use <i class="fas fa-image"/> to select the background color, for transparent pixels</li>
+          <li>Use <i class="fas fa-border-all"/> to change grid and overlays: all borders / tile borders / nothing</li>
+          <li>Use <i class="fas fa-search-minus"/> / <i class="fas fa-search-plus"/> to zoom-out/in</li>
+        </ul>
+      </li>
+      <li>
+        Animation edition
+        <ul>
+          <li>Select a frame from the thumbnails to edit it</li>
+          <li>Drag and drop frames to reorder them</li>
+          <li>Drop a frame on <i class="fas fa-plus-square" /> to clone it</li>
+        </ul>
+      </li>
+      <li>
+        Frame edition
+        <ul>
+          <li>Select a sprite from the thumbnails or using <i class="fas fa-mouse-pointer" /> tool to edit it</li>
+          <li>Drag and drop sprites to reorder them</li>
+          <li>Drop a sprite on <i class="fas fa-plus-square" /> to clone it</li>
+          <li>Check/uncheck hurtbox and hitbox to enable/disable them</li>
+          <li>Use <i class="fas fa-vector-square"/> to toggle hurtbox and hitbox display</li>
+          <li>The red dot marks the origin (character's left, at ground level)</li>
+        </ul>
+      </li>
+      <li>
+        Sprite edition
+        <ul>
+          <li>Select sprite's tile from the thumbnails</li>
+          <li>Use <i class="fas fa-arrows-alt-h"/> to flip the sprite horizontally</li>
+          <li>Use <i class="fas fa-arrows-alt-v"/> to flip the sprite vertically</li>
+          <li>Use <i class="fas fa-palette"/> to toggle between primary and secondary palette</li>
+          <li>Use <i class="fas fa-layer-group"/> to toggle between foreground and background</li>
+        </ul>
+      </li>
     </ul>
   `,
 }

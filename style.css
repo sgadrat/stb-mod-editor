@@ -387,3 +387,9 @@ div.sprite-info {
 .bg-illu-large-c2 { background-color: #787878; }
 .bg-illu-large-c3 { background-color: #C4C4C4; }
 
+
+#help i.fas {
+  font-size: 90%;
+  vertical-align: baseline;
+}
+
