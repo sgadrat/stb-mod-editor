@@ -691,11 +691,46 @@ app.component('stb-animation-frame', {
         y: 0,
       });
     },
+
+    dragStartSpriteOnGrid(ev, sprite) {
+      this.selectedSprite = sprite
+
+      ev.dataTransfer.dropEffect = 'move';
+      ev.dataTransfer.effectAllowed = 'move';
+
+      const step = ev.target.offsetWidth / 8;
+      const x0 = Math.floor(ev.offsetX / step);
+      const y0 = Math.floor(ev.offsetY / step);
+      ev.dataTransfer.setData('data', JSON.stringify({
+        idx: this.frame.sprites.indexOf(sprite),
+        x0, y0,
+        //XXX This assumes zoom doesn't change
+        step,
+      }));
+      ev.dataTransfer.setData('group', 'sprite-on-grid');
+      // Hide the "ghost" by moving it outside the windows
+      ev.dataTransfer.setDragImage(ev.target, window.outerWidth, window.outerHeight);
+    },
+
+    dragOverSpriteOnGrid(ev) {
+      if (ev.dataTransfer.getData('group') === 'sprite-on-grid') {
+        ev.dataTransfer.dropEffect = 'move';
+        const data = JSON.parse(ev.dataTransfer.getData('data'));
+        const sprite = this.frame.sprites[data.idx];
+        const x = Math.floor((ev.pageX - ev.currentTarget.offsetLeft) / data.step);
+        const y = Math.floor((ev.pageY - ev.currentTarget.offsetTop) / data.step);
+        //XXX For now, prevent going beyond left/top, to avoid "infinite resizing"
+        sprite.x = this.rect.x + Math.max(x - data.x0, 0);
+        sprite.y = this.rect.y + Math.max(y - data.y0, 0);
+      } else {
+        ev.dataTransfer.dropEffect = 'none';
+      }
+    },
   },
 
   template: `
     <div class="animation-frame">
-      <div class="frame-canvas">
+      <div class="frame-canvas" @dragover.prevent="dragOverSpriteOnGrid($event)">
         <table class="stb-tile background bg-none">
           <tr v-for="y in rect.height">
             <td v-for="x in rect.width"
@@ -712,6 +747,8 @@ app.component('stb-animation-frame', {
           :style="spriteStyle(sprite)"
           @click.capture="conf.tool === 'select' && (selectedSprite = sprite, $event.stopPropagation())"
           @mousemove.capture="conf.tool === 'select' && $event.stopPropagation()"
+          :draggable="conf.tool === 'select'"
+          @dragstart="dragStartSpriteOnGrid($event, sprite)"
           />
         <div v-if="frame.hitbox" class="frame-hitbox" :style="boxStyle(frame.hitbox)" />
         <div v-if="frame.hurtbox" class="frame-hurtbox" :style="boxStyle(frame.hurtbox)" />
@@ -897,7 +934,6 @@ app.component('dnd-list', {
     dragOver(ev) {
       if (ev.dataTransfer.getData('group') === this.group) {
         ev.dataTransfer.dropEffect = 'move';
-        //TODO change display
       } else {
         ev.dataTransfer.dropEffect = 'none';
       }
