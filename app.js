@@ -253,6 +253,16 @@ class Utils {
   static getAllPalettes(tree) {
     return tree.color_swaps.primary_colors.map((_, swap) => this.getPalettes(tree, swap));
   }
+
+  static newTileName(tree) {
+    const prefix = tree.name.toUpperCase() + '_TILE_';
+    for (let i = 0; ; ++i) {
+      name = prefix + i;
+      if (!tree.tileset.tilenames.includes(name)) {
+        return name;
+      }
+    }
+  }
 }
 
 
@@ -682,7 +692,8 @@ app.component('stb-animation-frame', {
     },
 
     newSprite() {
-      this.frame.sprites.push({
+      const sprites = this.frame.sprites;
+      sprites.push({
         type: 'animation_sprite',
         tile: this.tree.tileset.tilenames[0],
         attr: 0,
@@ -690,13 +701,29 @@ app.component('stb-animation-frame', {
         x: 0,
         y: 0,
       });
+      this.selectedSprite = sprites[sprites.length-1];
+    },
+
+    dropNewSprite(ev) {
+      if (ev.dataTransfer.getData('group') === 'sprites') {
+        const idx = parseInt(ev.dataTransfer.getData('idx'));
+        const sprites = this.frame.sprites;
+        sprites.push(cloneData(sprites[idx]));
+        this.selectedSprite = sprites[sprites.length-1];
+      }
+    },
+
+    dragNewSprite(ev) {
+      if (ev.dataTransfer.getData('group') === 'sprites') {
+        ev.dataTransfer.dropEffect = 'copy';
+      }
     },
 
     dragStartSpriteOnGrid(ev, sprite) {
       this.selectedSprite = sprite
 
-      ev.dataTransfer.dropEffect = 'move';
       ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.dropEffect = 'move';
 
       const step = ev.target.offsetWidth / 8;
       const x0 = Math.floor(ev.offsetX / step);
@@ -795,7 +822,12 @@ app.component('stb-animation-frame', {
                />
             </template>
           </dnd-list>
-          <div class="frame-thumbnails-new" @click="newSprite()">
+          <div
+            class="frame-thumbnails-new"
+            @click="newSprite()"
+            @drop="dropNewSprite($event)"
+            @dragover.prevent="dragNewSprite($event)"
+           >
             <i class="fas fa-plus-square" />
           </div>
         </div>
@@ -925,8 +957,9 @@ app.component('dnd-list', {
 
   methods: {
     dragStart(ev, idx) {
+      //XXX Adding 'copy' should be configurable
+      ev.dataTransfer.effectAllowed = 'moveCopy';
       ev.dataTransfer.dropEffect = 'move';
-      ev.dataTransfer.effectAllowed = 'move';
       ev.dataTransfer.setData('idx', idx);
       ev.dataTransfer.setData('group', this.group);
     },
@@ -1022,21 +1055,28 @@ const TilesetTab = {
 
     newTile() {
       const tileset = this.tree.tileset;
-
-      const prefix = this.tree.name.toUpperCase() + '_TILE_';
-      let name = null;
-      for (let i = 0; ; ++i) {
-        name = prefix + i;
-        if (!tileset.tilenames.includes(name)) {
-          break;
-        }
-      }
-
-      tileset.tilenames.push(name);
+      tileset.tilenames.push(Utils.newTileName(this.tree));
       tileset.tiles.push({
         type: 'tile',
         representation: Array.from({length: 8}).map(_ => Array(8).fill(0)),
       });
+      this.selectedTile = tileset.tiles[tileset.tiles.length-1];
+    },
+
+    dropNewTile(ev) {
+      if (ev.dataTransfer.getData('group') === 'tileset') {
+        const tileset = this.tree.tileset;
+        const idx = parseInt(ev.dataTransfer.getData('idx'));
+        tileset.tilenames.push(Utils.newTileName(this.tree));
+        tileset.tiles.push(cloneData(tileset.tiles[idx]));
+        this.selectedTile = tileset.tiles[tileset.tiles.length-1];
+      }
+    },
+
+    dragNewTile(ev) {
+      if (ev.dataTransfer.getData('group') === 'tileset') {
+        ev.dataTransfer.dropEffect = 'copy';
+      }
     },
   },
 
@@ -1059,7 +1099,12 @@ const TilesetTab = {
              />
           </template>
         </dnd-list>
-        <div class="tileset-tiles-new" @click="newTile()">
+        <div
+          class="tileset-tiles-new"
+          @click="newTile()"
+          @drop="dropNewTile($event)"
+          @dragover.prevent="dragNewTile($event)"
+         >
           <i class="fas fa-plus-square" />
         </div>
       </div>
@@ -1159,6 +1204,21 @@ const AnimationTab = {
       this.updateFrame(frames[frames.length-1]);
     },
 
+    dropNewFrame(ev) {
+      if (ev.dataTransfer.getData('group') === 'frames') {
+        const idx = parseInt(ev.dataTransfer.getData('idx'));
+        const frames = this.animation.frames;
+        frames.push(cloneData(frames[idx]));
+        this.updateFrame(frames[frames.length-1]);
+      }
+    },
+
+    dragNewFrame(ev) {
+      if (ev.dataTransfer.getData('group') === 'frames') {
+        ev.dataTransfer.dropEffect = 'copy';
+      }
+    },
+
     moveFrame(src, dst) {
       if (this.selectedFrame) {
         // Update URL (index may have changed)
@@ -1188,7 +1248,12 @@ const AnimationTab = {
              />
           </template>
         </dnd-list>
-        <div class="frame-thumbnails-new" @click="newFrame()">
+        <div
+          class="frame-thumbnails-new"
+          @click="newFrame()"
+          @drop="dropNewFrame($event)"
+          @dragover.prevent="dragNewFrame($event)"
+         >
           <i class="fas fa-plus-square" />
         </div>
       </div>
