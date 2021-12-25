@@ -691,40 +691,6 @@ app.component('stb-animation-frame', {
         y: 0,
       });
     },
-
-    dragSprite(ev, idx) {
-      ev.dataTransfer.dropEffect = 'move';
-      ev.dataTransfer.effectAllowed = 'copyMove';
-      ev.dataTransfer.setData('idx', idx);
-      ev.dataTransfer.setData('group', 'sprite');
-    },
-
-    dragSpriteOver(ev, effect) {
-      if (ev.dataTransfer.getData('group') === 'sprite') {
-        ev.dataTransfer.dropEffect = effect;
-      } else {
-        ev.dataTransfer.dropEffect = 'none';
-      }
-    },
-
-    dropSprite(ev, dst) {
-      if (ev.dataTransfer.getData('group') === 'sprite') {
-        const src = parseInt(ev.dataTransfer.getData('idx'));
-        const sprites = this.frame.sprites;
-        if (src !== dst) {
-          sprites.splice(dst, 0, sprites[src]);
-          sprites.splice(src < dst ? src : src + 1, 1);
-        }
-      }
-    },
-
-    dropNewSprite(ev) {
-      if (ev.dataTransfer.getData('group') === 'sprite') {
-        const src = parseInt(ev.dataTransfer.getData('idx'));
-        const sprites = this.frame.sprites;
-        sprites.push(cloneData(sprites[src]));
-      }
-    },
   },
 
   template: `
@@ -779,30 +745,22 @@ app.component('stb-animation-frame', {
         </div>
         <hr/>
         <div class="sprite-thumbnails">
-          <template v-for="(sprite, idx) in frame.sprites">
-            <div class="dragdrop-divider"
-              @drop="dropSprite($event, idx)"
-              @dragover.prevent="dragSpriteOver($event, 'move')"
-              ></div>
-            <stb-sprite-thumbnail
-              :sprite="sprite"
-              :class="{ selected: selectedSprite === sprite }"
-              @click="selectedSprite = sprite"
-              draggable="true"
-              @dragstart="dragSprite($event, idx)"
-             />
-          </template>
-          <div class="dragdrop-divider"
-            @drop="dropSprite($event, idx)"
-            @dragover.prevent="dragSpriteOver($event, 'move')"
-           ></div>
-          <div class="sprite-thumbnails-new"
-            @click="newSprite()"
-            @drop="dropNewSprite($event)"
-            @dragover.prevent="dragSpriteOver($event, 'copy')"
+          <dnd-list
+            :items="frame.sprites"
+            group="sprites"
+            direction="horizontal"
            >
+            <template v-slot:item="props">
+              <stb-sprite-thumbnail
+                :sprite="props.item"
+                :class="{ selected: props.item === selectedSprite }"
+                @click="selectedSprite = props.item"
+               />
+            </template>
+          </dnd-list>
+          <div class="frame-thumbnails-new" @click="newSprite()">
             <i class="fas fa-plus-square" />
-        </div>
+          </div>
         </div>
         <hr/>
         <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
@@ -1141,7 +1099,8 @@ const AnimationTab = {
       }
     },
 
-    updateFrame(idx) {
+    updateFrame(frame) {
+      const idx = this.animation.frames.indexOf(frame);
       this.$router.replace(`/animations/${this.animation.name}/${idx}`);
     },
 
@@ -1161,44 +1120,13 @@ const AnimationTab = {
         hitbox: null,
         hurtbox: null,
       });
-      this.updateFrame(frames.length-1);
+      this.updateFrame(frames[frames.length-1]);
     },
 
-    dragFrame(ev, idx) {
-      ev.dataTransfer.dropEffect = 'move';
-      ev.dataTransfer.effectAllowed = 'copyMove';
-      ev.dataTransfer.setData('idx', idx);
-      ev.dataTransfer.setData('group', 'frame');
-    },
-
-    dragFrameOver(ev, effect) {
-      if (ev.dataTransfer.getData('group') === 'frame') {
-        ev.dataTransfer.dropEffect = effect;
-      } else {
-        ev.dataTransfer.dropEffect = 'none';
-      }
-    },
-
-    dropFrame(ev, dst) {
-      if (ev.dataTransfer.getData('group') === 'frame') {
-        const src = parseInt(ev.dataTransfer.getData('idx'));
-        const frames = this.animation.frames;
-        if (src !== dst) {
-          frames.splice(dst, 0, frames[src]);
-          frames.splice(src < dst ? src : src + 1, 1);
-        }
-        if (this.selectedFrame) {
-          // Update the URL (index may have changed)
-          this.updateFrame(this.animation.frames.indexOf(this.selectedFrame));
-        }
-      }
-    },
-
-    dropNewFrame(ev) {
-      if (ev.dataTransfer.getData('group') === 'frame') {
-        const src = parseInt(ev.dataTransfer.getData('idx'));
-        const frames = this.animation.frames;
-        frames.push(cloneData(frames[src]));
+    moveFrame(src, dst) {
+      if (this.selectedFrame) {
+        // Update URL (index may have changed)
+        this.updateFrame(this.selectedFrame);
       }
     },
   },
@@ -1210,28 +1138,21 @@ const AnimationTab = {
         <label>Name: <input v-model="animation.name" style="width: 40%;"/></label>
       </div>
       <div class="frame-thumbnails">
-        <template v-for="(frame, idx) in animation.frames">
-          <div class="dragdrop-divider"
-            @drop="dropFrame($event, idx)"
-            @dragover.prevent="dragFrameOver($event, 'move')"
-            ></div>
-          <stb-frame-thumbnail
-            :frame="frame"
-            :class="{ selected: selectedFrame === frame }"
-            @click="updateFrame(idx)"
-            draggable="true"
-            @dragstart="dragFrame($event, idx)"
-           />
-        </template>
-        <div class="dragdrop-divider"
-          @drop="dropFrame($event, idx)"
-          @dragover.prevent="dragFrameOver($event, 'move')"
-         ></div>
-        <div class="frame-thumbnails-new"
-          @click="newFrame()"
-          @drop="dropNewFrame($event)"
-          @dragover.prevent="dragFrameOver($event, 'copy')"
+        <dnd-list
+          :items="animation.frames"
+          group="frames"
+          direction="horizontal"
+          @move="moveFrame"
          >
+          <template v-slot:item="props">
+            <stb-frame-thumbnail
+              :frame="props.item"
+              :class="{ selected: props.item === selectedFrame }"
+              @click="updateFrame(props.item)"
+             />
+          </template>
+        </dnd-list>
+        <div class="frame-thumbnails-new" @click="newFrame()">
           <i class="fas fa-plus-square" />
         </div>
       </div>

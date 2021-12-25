@@ -327,6 +327,7 @@ div.sprite-info {
 .stb-frame-thumbnail {
   flex: 0 0 fit-content;
   border: 1px solid black;
+  margin: 4px;
 }
 .stb-frame-thumbnail.selected {
   outline: 2px solid red;
@@ -345,6 +346,7 @@ div.sprite-info {
 .stb-sprite-thumbnail {
   flex: 0 0 fit-content;
   border: 1px solid black;
+  margin: 4px;
 }
 .stb-sprite-thumbnail.selected {
   outline: 2px solid red;
@@ -353,14 +355,6 @@ div.sprite-info {
 .sprite-thumbnails-new {
   font-size: 24px;
   padding: 3px 3px;
-}
-
-.dragdrop-divider {
-  flex: 0 0 min-content;
-  padding: 0 0.3em;
-  width: 20px;
-  align-self: stretch;
-  margin: 2px;
 }
 
 .bg-none { background-color: var(--color-none); }
