@@ -301,12 +301,12 @@ div.sprite-info {
   line-height: 0;
 }
 
-.sprite-tile-picker .tile-thumbnail {
+.sprite-tile-picker .stb-tile-thumbnail {
   border: 1px solid black;
   margin: 0.1em;
 }
 
-.sprite-tile-picker .tile-thumbnail.selected {
+.sprite-tile-picker .stb-tile-thumbnail.selected {
   outline: 2px solid red;
 }
 
@@ -315,12 +315,35 @@ div.sprite-info {
   align-items: center;
   margin: 0.5em;
 }
-.frame-thumbnail {
+.stb-frame-thumbnail {
   flex: 0 0 fit-content;
   border: 1px solid black;
 }
-.frame-thumbnail.selected {
+.stb-frame-thumbnail.selected {
   outline: 2px solid red;
+}
+
+.frame-thumbnails-new {
+  font-size: 32px;
+  padding: 5px 5px;
+}
+
+.sprite-thumbnails {
+  display: flex;
+  align-items: center;
+  margin: 0.5em 0;
+}
+.stb-sprite-thumbnail {
+  flex: 0 0 fit-content;
+  border: 1px solid black;
+}
+.stb-sprite-thumbnail.selected {
+  outline: 2px solid red;
+}
+
+.sprite-thumbnails-new {
+  font-size: 24px;
+  padding: 3px 3px;
 }
 
 .dragdrop-divider {
@@ -329,11 +352,6 @@ div.sprite-info {
   width: 20px;
   align-self: stretch;
   margin: 2px;
-}
-
-.frame-thumbnails-new {
-  font-size: 32px;
-  padding: 5px 5px;
 }
 
 .bg-none { background-color: var(--color-none); }

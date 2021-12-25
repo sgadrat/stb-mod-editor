@@ -192,6 +192,24 @@ class Utils {
     this.drawSingleTile(ctx, tree, tile, { zoom, palette })
   }
 
+  static drawSingleSprite(ctx, tree, sprite, { zoom = 1, palettes, x = 0, y = 0 }) {
+      const tile = this.getTileByName(tree, sprite.tile);
+      const palette = palettes[sprite.attr & 0x1];
+      const flip_x = sprite.attr & 0x40;
+      const flip_y = sprite.attr & 0x80;
+      this.drawSingleTile(ctx, tree, tile, { zoom, palette, x, y, flip_x, flip_y })
+  }
+
+  static drawSprite(ctx, tree, sprite, { zoom = 1, background, palettes }) {
+    ctx.canvas.width = 8 * zoom;
+    ctx.canvas.height = 8 * zoom;
+
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 8 * zoom, 8 * zoom);
+
+    this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes })
+  }
+
   static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes }) {
     const rect = this.frameRect(frame);
     ctx.canvas.width = rect.width * zoom;
@@ -200,22 +218,18 @@ class Utils {
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, rect.width * zoom, rect.height * zoom);
 
-    const drawSpriteTile = (sprite, x, y) => {
-      const tile = this.getTileByName(tree, sprite.tile);
-      const palette = palettes[sprite.attr & 0x1];
-      const flip_x = sprite.attr & 0x40;
-      const flip_y = sprite.attr & 0x80;
-      this.drawSingleTile(ctx, tree, tile, { zoom, palette, x, y, flip_x, flip_y })
-    }
-
     for (let sprite of frame.sprites) {
       if (!sprite.foreground) {
-        drawSpriteTile(sprite, sprite.x - rect.x, sprite.y - rect.y);
+        const x = sprite.x - rect.x;
+        const y = sprite.y - rect.y;
+        this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes, x, y  });
       }
     }
     for (let sprite of frame.sprites) {
       if (sprite.foreground) {
-        drawSpriteTile(sprite, sprite.x - rect.x, sprite.y - rect.y);
+        const x = sprite.x - rect.x;
+        const y = sprite.y - rect.y;
+        this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes, x, y  });
       }
     }
   }
@@ -666,7 +680,39 @@ app.component('stb-animation-frame', {
         x: 0,
         y: 0,
       });
-    }
+    },
+
+    dragSprite(ev, idx) {
+      ev.dataTransfer.dropEffect = 'move';
+      ev.dataTransfer.effectAllowed = 'copyMove';
+      ev.dataTransfer.setData('idx', idx);
+      ev.dataTransfer.setData('group', 'sprite');
+    },
+
+    dragSpriteOver(ev, effect) {
+      if (ev.dataTransfer.getData('group') === 'sprite') {
+        ev.dataTransfer.dropEffect = effect;
+      }
+    },
+
+    dropSprite(ev, dst) {
+      if (ev.dataTransfer.getData('group') === 'sprite') {
+        const src = parseInt(ev.dataTransfer.getData('idx'));
+        const sprites = this.frame.sprites;
+        if (src !== dst) {
+          sprites.splice(dst, 0, sprites[src]);
+          sprites.splice(src < dst ? src : src + 1, 1);
+        }
+      }
+    },
+
+    dropNewSprite(ev) {
+      if (ev.dataTransfer.getData('group') === 'sprite') {
+        const src = parseInt(ev.dataTransfer.getData('idx'));
+        const sprites = this.frame.sprites;
+        sprites.push(cloneData(sprites[src]));
+      }
+    },
   },
 
   template: `
@@ -719,8 +765,32 @@ app.component('stb-animation-frame', {
           <br/>
           <label><input type="checkbox" v-model="frame.hitbox.enabled" /> Enabled</label><br/>
         </div>
-        <div>
-          <button class="icon" @click="newSprite()" title="Add new sprite"><i class="fas fa-plus-square"/></button>
+        <hr/>
+        <div class="sprite-thumbnails">
+          <template v-for="(sprite, idx) in frame.sprites">
+            <div class="dragdrop-divider"
+              @drop="dropSprite($event, idx)"
+              @dragover.prevent="dragSpriteOver($event, 'move')"
+              ></div>
+            <stb-sprite-thumbnail
+              :sprite="sprite"
+              :class="{ selected: selectedSprite === sprite }"
+              @click="selectedSprite = sprite"
+              draggable="true"
+              @dragstart="dragSprite($event, idx)"
+             />
+          </template>
+          <div class="dragdrop-divider"
+            @drop="dropSprite($event, idx)"
+            @dragover.prevent="dragSpriteOver($event, 'move')"
+           ></div>
+          <div class="sprite-thumbnails-new"
+            @click="newSprite()"
+            @drop="dropNewSprite($event)"
+            @dragover.prevent="dragSpriteOver($event, 'copy')"
+           >
+            <i class="fas fa-plus-square" />
+        </div>
         </div>
         <hr/>
         <stb-sprite-info v-if="selectedSprite" :sprite="selectedSprite" />
@@ -769,7 +839,7 @@ app.component('stb-frame-thumbnail', {
   },
 
   template: `
-    <canvas ref="canvas" class="frame-thumbnail" />
+    <canvas ref="canvas" class="stb-frame-thumbnail" />
   `,
 });
 
@@ -790,7 +860,28 @@ app.component('stb-tile-thumbnail', {
   },
 
   template: `
-    <canvas ref="canvas" class="tile-thumbnail" />
+    <canvas ref="canvas" class="stb-tile-thumbnail" />
+  `,
+});
+
+app.component('stb-sprite-thumbnail', {
+  props: ['sprite'],
+  inject: ['tree', 'conf'],
+
+  methods: {
+    drawSprite() {
+      const ctx = this.$refs.canvas.getContext('2d');
+      const palettes = this.conf.palettes(this.tree);
+      return Utils.drawSprite(ctx, this.tree, this.sprite, { zoom: 4, background: this.conf.bgColor, palettes });
+    },
+  },
+
+  mounted() {
+    Vue.watchEffect(() => this.drawSprite());
+  },
+
+  template: `
+    <canvas ref="canvas" class="stb-sprite-thumbnail" />
   `,
 });
 
@@ -918,7 +1009,14 @@ const AnimationTab = {
       frames.push({
         type: 'animation_frame',
         duration: 1,
-        sprites: [],
+        sprites: [{
+          type: 'animation_sprite',
+          tile: this.tree.tileset.tilenames[0],
+          attr: 0,
+          foreground: false,
+          x: 0,
+          y: 0,
+        }],
         hitbox: null,
         hurtbox: null,
       });
@@ -926,25 +1024,35 @@ const AnimationTab = {
     },
 
     dragFrame(ev, idx) {
-      console.log(`DRAG start: ${idx}`);
       ev.dataTransfer.dropEffect = 'move';
       ev.dataTransfer.effectAllowed = 'copyMove';
       ev.dataTransfer.setData('idx', idx);
+      ev.dataTransfer.setData('group', 'frame');
+    },
+
+    dragFrameOver(ev, effect) {
+      if (ev.dataTransfer.getData('group') === 'frame') {
+        ev.dataTransfer.dropEffect = effect;
+      }
     },
 
     dropFrame(ev, dst) {
-      const src = parseInt(ev.dataTransfer.getData('idx'));
-      const frames = this.animation.frames;
-      if (src !== dst) {
-        frames.splice(dst, 0, frames[src]);
-        frames.splice(src < dst ? src : src + 1, 1);
+      if (ev.dataTransfer.getData('group') === 'frame') {
+        const src = parseInt(ev.dataTransfer.getData('idx'));
+        const frames = this.animation.frames;
+        if (src !== dst) {
+          frames.splice(dst, 0, frames[src]);
+          frames.splice(src < dst ? src : src + 1, 1);
+        }
       }
     },
 
     dropNewFrame(ev) {
-      const src = parseInt(ev.dataTransfer.getData('idx'));
-      const frames = this.animation.frames;
-      frames.push(cloneData(frames[src]));
+      if (ev.dataTransfer.getData('group') === 'frame') {
+        const src = parseInt(ev.dataTransfer.getData('idx'));
+        const frames = this.animation.frames;
+        frames.push(cloneData(frames[src]));
+      }
     },
   },
 
@@ -958,7 +1066,7 @@ const AnimationTab = {
         <template v-for="(frame, idx) in animation.frames">
           <div class="dragdrop-divider"
             @drop="dropFrame($event, idx)"
-            @dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
+            @dragover.prevent="dragFrameOver($event, 'move')"
             ></div>
           <stb-frame-thumbnail
             :frame="frame"
@@ -970,12 +1078,12 @@ const AnimationTab = {
         </template>
         <div class="dragdrop-divider"
           @drop="dropFrame($event, idx)"
-          @dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
+          @dragover.prevent="dragFrameOver($event, 'move')"
          ></div>
         <div class="frame-thumbnails-new"
           @click="newFrame()"
           @drop="dropNewFrame($event)"
-          @dragover.prevent="$event.dataTransfer.dropEffect = 'copy'"
+          @dragover.prevent="dragFrameOver($event, 'copy')"
          >
           <i class="fas fa-plus-square" />
         </div>
