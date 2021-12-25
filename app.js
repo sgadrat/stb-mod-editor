@@ -888,19 +888,23 @@ const AnimationTab = {
  
   methods: {
     updateAnimation() {
-      if (this.tree) {
-        this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
-        if (this.animation === undefined) {
-          this.$router.push('/animations');
-          return;
-        }
-        const frame = this.$route.params.frame;
-        if (frame !== undefined) {
-          this.selectedFrame = this.animation.frames[frame];
-          if (this.selectedFrame === undefined) {
-            this.selectedFrame = null;
-            this.$router.replace(`/animations/${this.animation.name}`);
-          }
+      if (!this.tree) {
+        return;
+      }
+      if (!this.$route.path.startsWith('/animations')) {
+        return;
+      }
+      this.animation = this.tree.animations.find(anim => anim.name === this.$route.params.name);
+      if (this.animation === undefined) {
+        this.$router.push('/animations');
+        return;
+      }
+      const frame = this.$route.params.frame;
+      if (frame !== undefined) {
+        this.selectedFrame = this.animation.frames[frame];
+        if (this.selectedFrame === undefined) {
+          this.selectedFrame = null;
+          this.$router.replace(`/animations/${this.animation.name}`);
         }
       }
     },
