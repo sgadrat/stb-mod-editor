@@ -184,18 +184,17 @@ table.stb-tile td {
   flex-wrap: wrap;
   line-height: 0;
 }
-
 .selected-tile .stb-tile {
   outline: 3px solid black;
   outline-offset: -1px;
   width: fit-content;
   margin: 0.3em;
 }
-
-.tileset-tiles-new {
+.tileset-tiles .icon {
   font-size: 32px;
   width: 48px;
   text-align: center;
+  margin-right: 1em;
 }
 
 
@@ -327,10 +326,11 @@ div.sprite-info {
 .stb-frame-thumbnail.selected {
   outline: 2px solid red;
 }
-
-.frame-thumbnails-new {
+.frame-thumbnails .icon {
   font-size: 32px;
-  padding: 5px 5px;
+  padding: 0px 5px;
+  line-height: 0;
+  margin-right: 1em;
 }
 
 .sprite-thumbnails {
@@ -346,10 +346,11 @@ div.sprite-info {
 .stb-sprite-thumbnail.selected {
   outline: 2px solid red;
 }
-
-.sprite-thumbnails-new {
+.sprite-thumbnails .icon {
   font-size: 24px;
-  padding: 3px 3px;
+  padding: 0px 5px;
+  line-height: 0;
+  margin-right: 1em;
 }
 
 .bg-none { background-color: var(--color-none); }

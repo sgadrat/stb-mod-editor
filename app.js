@@ -719,6 +719,15 @@ app.component('stb-animation-frame', {
       }
     },
 
+    removeSelectedSprite() {
+      if (this.selectedSprite) {
+        const sprites = this.frame.sprites;
+        const idx = sprites.indexOf(this.selectedSprite);
+        sprites.splice(idx, 1);
+        this.selectedSprite = null;
+      }
+    },
+
     dragStartSpriteOnGrid(ev, sprite) {
       this.selectedSprite = sprite
 
@@ -823,12 +832,15 @@ app.component('stb-animation-frame', {
             </template>
           </dnd-list>
           <div
-            class="frame-thumbnails-new"
+            class="icon"
             @click="newSprite()"
             @drop="dropNewSprite($event)"
             @dragover.prevent="dragNewSprite($event)"
            >
             <i class="fas fa-plus-square" />
+          </div>
+          <div class="icon" @click="removeSelectedSprite()" v-show="selectedSprite">
+            <i class="fas fa-trash-alt" />
           </div>
         </div>
         <hr/>
@@ -1078,6 +1090,16 @@ const TilesetTab = {
         ev.dataTransfer.dropEffect = 'copy';
       }
     },
+
+    removeSelectedTile() {
+      if (this.selectedTile) {
+        const tileset = this.tree.tileset;
+        const idx = tileset.tiles.indexOf(this.selectedTile);
+        tileset.tiles.splice(idx, 1);
+        tileset.tilenames.splice(idx, 1);
+        this.selectedTile = null;
+      }
+    },
   },
 
   template: `
@@ -1100,12 +1122,15 @@ const TilesetTab = {
           </template>
         </dnd-list>
         <div
-          class="tileset-tiles-new"
+          class="icon"
           @click="newTile()"
           @drop="dropNewTile($event)"
           @dragover.prevent="dragNewTile($event)"
          >
           <i class="fas fa-plus-square" />
+        </div>
+        <div class="icon" @click="removeSelectedTile()" v-show="selectedTile">
+          <i class="fas fa-trash-alt" />
         </div>
       </div>
       <div v-if="selectedTile" class="selected-tile">
@@ -1171,7 +1196,9 @@ const AnimationTab = {
         return;
       }
       const frame = this.$route.params.frame;
-      if (frame !== undefined) {
+      if (frame === undefined) {
+        this.selectedFrame = null;
+      } else {
         this.selectedFrame = this.animation.frames[frame];
         if (this.selectedFrame === undefined) {
           this.selectedFrame = null;
@@ -1181,8 +1208,12 @@ const AnimationTab = {
     },
 
     updateFrame(frame) {
-      const idx = this.animation.frames.indexOf(frame);
-      this.$router.replace(`/animations/${this.animation.name}/${idx}`);
+      if (frame) {
+        const idx = this.animation.frames.indexOf(frame);
+        this.$router.replace(`/animations/${this.animation.name}/${idx}`);
+      } else {
+        this.$router.replace(`/animations/${this.animation.name}`);
+      }
     },
 
     newFrame() {
@@ -1225,6 +1256,15 @@ const AnimationTab = {
         this.updateFrame(this.selectedFrame);
       }
     },
+
+    removeSelectedFrame() {
+      if (this.selectedFrame) {
+        const frames = this.animation.frames;
+        const idx = frames.indexOf(this.selectedFrame);
+        frames.splice(idx, 1);
+        this.updateFrame(null);
+      }
+    },
   },
 
   template: `
@@ -1249,12 +1289,15 @@ const AnimationTab = {
           </template>
         </dnd-list>
         <div
-          class="frame-thumbnails-new"
+          class="icon"
           @click="newFrame()"
           @drop="dropNewFrame($event)"
           @dragover.prevent="dragNewFrame($event)"
          >
           <i class="fas fa-plus-square" />
+        </div>
+        <div class="icon" @click="removeSelectedFrame()" v-show="selectedFrame">
+          <i class="fas fa-trash-alt" />
         </div>
       </div>
       <div>
