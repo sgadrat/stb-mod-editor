@@ -1,3 +1,7 @@
+a:link {
+  text-decoration: none;
+}
+
 #app {
   display: flex;
   position: relative;
@@ -422,5 +426,21 @@ textarea.sourcecode {
 #help i.fas {
   font-size: 90%;
   vertical-align: baseline;
+}
+
+
+.tab-animations ul {
+  list-style-type: none;
+  font-size: 110%;
+  padding: 0;
+}
+
+.tab-animations li {
+  margin: 0.1em;
+}
+
+.tab-animations .stb-animation-thumbnail {
+  margin-right: 0.5em;
+  vertical-align: middle;
 }
 

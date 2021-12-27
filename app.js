@@ -127,7 +127,7 @@ const PALETTE_NAMES = ['primary_colors', 'secondary_colors', 'alternate_colors']
 const MANDATORY_ANIMATION_NAMES = ['menu_select_animation', 'defeat_animation', 'victory_animation']
 
 class Utils {
-  static frameRect(frame) {
+  static frameRect(frame, { boxes = false }) {
     const sprites_x = frame.sprites.map(s => s.x);
     const sprites_y = frame.sprites.map(s => s.y);
     let left = Math.min.apply(Math, sprites_x);
@@ -135,17 +135,19 @@ class Utils {
     let top = Math.min.apply(Math, sprites_y);
     let bottom = Math.max.apply(Math, sprites_y) + 7;
 
-    if (frame.hitbox) {
-      left = Math.min(left, frame.hitbox.left);
-      right = Math.max(right, frame.hitbox.right);
-      top = Math.min(top, frame.hitbox.top);
-      bottom = Math.max(bottom, frame.hitbox.bottom);
-    }
-    if (frame.hurtbox) {
-      left = Math.min(left, frame.hurtbox.left);
-      right = Math.max(right, frame.hurtbox.right);
-      top = Math.min(top, frame.hurtbox.top);
-      bottom = Math.max(bottom, frame.hurtbox.bottom);
+    if (boxes) {
+      if (frame.hitbox) {
+        left = Math.min(left, frame.hitbox.left);
+        right = Math.max(right, frame.hitbox.right);
+        top = Math.min(top, frame.hitbox.top);
+        bottom = Math.max(bottom, frame.hitbox.bottom);
+      }
+      if (frame.hurtbox) {
+        left = Math.min(left, frame.hurtbox.left);
+        right = Math.max(right, frame.hurtbox.right);
+        top = Math.min(top, frame.hurtbox.top);
+        bottom = Math.max(bottom, frame.hurtbox.bottom);
+      }
     }
 
     // make sure it includes the (Y-shifted) origin
@@ -160,6 +162,20 @@ class Utils {
       width: right - left + 1,
       height: bottom - top + 1,
     }
+  }
+
+  static animationRect(animation, { boxes = false }) {
+    const rects = animation.frames.map(f => this.frameRect(f, { boxes }));
+    const x0 = Math.min(...rects.map(r => r.x));
+    const y0 = Math.min(...rects.map(r => r.y));
+    const x1 = Math.max(...rects.map(r => r.x + r.width));
+    const y1 = Math.max(...rects.map(r => r.y + r.height));
+    return {
+      x: x0,
+      y: y0,
+      width: x1 - x0,
+      height: y1 - y0,
+    };
   }
 
   static getAnimationByName(tree, name) {
@@ -220,28 +236,32 @@ class Utils {
     this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes })
   }
 
+  static drawSingleFrame(ctx, tree, frame, { zoom = 1, background, palettes, dx, dy }) {
+    for (let sprite of frame.sprites) {
+      if (!sprite.foreground) {
+        const x = sprite.x + dx;
+        const y = sprite.y + dy;
+        this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes, x, y  });
+      }
+    }
+    for (let sprite of frame.sprites) {
+      if (sprite.foreground) {
+        const x = sprite.x + dx;
+        const y = sprite.y + dy;
+        this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes, x, y  });
+      }
+    }
+  }
+
   static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes }) {
-    const rect = this.frameRect(frame);
+    const rect = this.frameRect(frame, {});
     ctx.canvas.width = rect.width * zoom;
     ctx.canvas.height = rect.height * zoom;
 
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, rect.width * zoom, rect.height * zoom);
 
-    for (let sprite of frame.sprites) {
-      if (!sprite.foreground) {
-        const x = sprite.x - rect.x;
-        const y = sprite.y - rect.y;
-        this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes, x, y  });
-      }
-    }
-    for (let sprite of frame.sprites) {
-      if (sprite.foreground) {
-        const x = sprite.x - rect.x;
-        const y = sprite.y - rect.y;
-        this.drawSingleSprite(ctx, tree, sprite, { zoom, palettes, x, y  });
-      }
-    }
+    this.drawSingleFrame(ctx, tree, frame, { zoom, palettes, dx: -rect.x, dy: -rect.y });
   }
 
   static getPalettes(tree, swap) {
@@ -357,7 +377,7 @@ const app = Vue.createApp({
     document.addEventListener('keyup', this.keymodifierHandle);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     document.removeEventListener('keydown', this.keymodifierHandle);
     document.removeEventListener('keyup', this.keymodifierHandle);
   },
@@ -566,7 +586,7 @@ app.component('stb-animation-frame', {
 
   computed: {
     rect() {
-      return Utils.frameRect(this.frame);
+      return Utils.frameRect(this.frame, { boxes: true });
     },
   },
 
@@ -937,6 +957,74 @@ app.component('stb-sprite-thumbnail', {
   `,
 });
 
+app.component('stb-animation-thumbnail', {
+  props: ['animation', 'zoom', 'rect'],
+  inject: ['tree', 'conf'],
+
+  methods: {
+    updateAnimation() {
+      this.stopAnimation();
+
+      const rect = this.rect ? this.rect : Utils.animationRect(this.animation, {});
+      const palettes = this.conf.palettes(this.tree);
+
+      // Prepare the canvas
+      const canvas = this.$refs.canvas;
+      const ctx = canvas.getContext('2d');
+      ctx.canvas.width = rect.width * this.zoom;
+      ctx.canvas.height = rect.height * this.zoom;
+
+      const frames = this.animation.frames;
+
+      const promises = frames.map(frame => {
+        ctx.fillStyle = this.conf.bgColor;
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        Utils.drawSingleFrame(ctx, this.tree, frame, {
+          zoom: this.zoom, palettes, dx: -rect.x, dy: -rect.y,
+        });
+        return createImageBitmap(canvas);
+      });
+      Promise.all(promises).then(images => {
+        let position = null;
+        let ticks = 0;
+        this.interval = setInterval(() => {
+          ticks += 1;
+          if (position === null) {
+            position = 0;
+          } else if (ticks >= frames[position].duration) {
+            position = (position + 1) % frames.length;
+            ticks = 0;
+          } else {
+            return;  // nothing to do
+          }
+          ctx.drawImage(images[position], 0, 0);
+        }, 1000/60);
+      });
+    },
+
+    stopAnimation() {
+      if (this.interval !== null) {
+        clearInterval(this.interval);
+        this.interval = null;
+      }
+    },
+  },
+
+  mounted() {
+    this.interval = null;
+    Vue.watchEffect(() => this.updateAnimation());
+    //this.updateAnimation();
+  },
+
+  beforeUnmount() {
+    this.stopAnimation();
+  },
+
+  template: `
+    <canvas ref="canvas" class="stb-animation-thumbnail" />
+  `,
+});
+
 app.component('stb-state', {
   props: ['state'],
   emits: ['delete'],
@@ -1144,6 +1232,17 @@ const TilesetTab = {
 const AnimationsTab = {
   inject: ['tree'],
 
+  data() {
+    return {
+      animRect: {
+        x: -12,
+        y: -4,
+        width: 32,
+        height: 24,
+      },
+    }
+  },
+
   methods: {
     getMandatoryAnimations() {
       return MANDATORY_ANIMATION_NAMES.map(x => this.tree[x]);
@@ -1151,13 +1250,16 @@ const AnimationsTab = {
   },
 
   template: `
-    <div v-if="tree">
+    <div v-if="tree" class="tab-animations">
       <h2>Animations</h2>
       <ul>
         <li v-for="anim in getMandatoryAnimations()">
+          <stb-animation-thumbnail :animation="anim" :zoom="2" :rect="animRect"
+          />
           <router-link :to="'/animations/'+anim.name">{{ anim.name }}</router-link>
         </li>
         <li v-for="anim in tree.animations">
+          <stb-animation-thumbnail :animation="anim" :zoom="2" :rect="animRect" />
           <router-link :to="'/animations/'+anim.name">{{ anim.name }}</router-link>
         </li>
       </ul>
