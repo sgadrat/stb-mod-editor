@@ -161,10 +161,6 @@ table.stb-tile td {
   padding: 0;
 }
 
-.tool-grid-tiles table.stb-tile {
-  border-right: 1px solid black;
-  border-bottom: 1px solid black;
-}
 .tool-grid-pixels table.stb-tile td {
   border: 1px solid black;
 }
@@ -181,6 +177,11 @@ table.stb-tile td {
   outline-offset: -1px;
   width: fit-content;
 }
+.tool-grid-tiles .stb-illustration table.stb-tile {
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
 
 .tileset-tiles {
   display: flex;
@@ -188,11 +189,8 @@ table.stb-tile td {
   flex-wrap: wrap;
   line-height: 0;
 }
-.selected-tile .stb-tile {
-  outline: 3px solid black;
-  outline-offset: -1px;
-  width: fit-content;
-  margin: 0.3em;
+.tileset-tiles .stb-tile-thumbnail {
+  margin: 2px;
 }
 .tileset-tiles .icon {
   font-size: 32px;
@@ -201,6 +199,30 @@ table.stb-tile td {
   margin-right: 1em;
 }
 
+.tile-details {
+  display: flex;
+  margin: 1em;
+}
+
+.tile-canvas .stb-tile {
+  outline: 3px solid black;
+  outline-offset: -1px;
+  width: fit-content;
+}
+
+.tile-canvas {
+  flex: 0 0 fit-content;
+  position: relative;
+}
+
+.tile-info {
+  flex: 1 1;
+  margin-left: 2em;
+}
+
+.tile-info .icon {
+  margin-left: 2em;
+}
 
 .frame-canvas {
   outline: 2px solid black;
@@ -306,11 +328,25 @@ div.sprite-info {
 .sprite-tile-picker {
   margin-top: 0.5em;
   line-height: 0;
+  text-align: left;
+}
+.sprite-tile-picker > * {
+  vertical-align: middle;
+}
+.sprite-tile-picker .stb-tile-thumbnail {
+  margin: 1px;
+}
+.sprite-tile-picker .icon {
+  display: inline-block;
+  font-size: 24px;
+  width: 34px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 0;
 }
 
 .stb-tile-thumbnail {
   border: 1px solid black;
-  margin: 0.1em;
 }
 
 .stb-tile-thumbnail.selected {

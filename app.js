@@ -127,7 +127,7 @@ const PALETTE_NAMES = ['primary_colors', 'secondary_colors', 'alternate_colors']
 const MANDATORY_ANIMATION_NAMES = ['menu_select_animation', 'defeat_animation', 'victory_animation']
 
 class Utils {
-  static frameRect(frame, { boxes = false }) {
+  static frameRect(frame, { boxes = false, origin = false }) {
     const sprites_x = frame.sprites.map(s => s.x);
     const sprites_y = frame.sprites.map(s => s.y);
     let left = Math.min.apply(Math, sprites_x);
@@ -150,11 +150,13 @@ class Utils {
       }
     }
 
-    // make sure it includes the (Y-shifted) origin
-    left = Math.min(left, 0);
-    right = Math.max(right, 0);
-    top = Math.min(top, 16);
-    bottom = Math.max(bottom, 16);
+    if (origin) {
+      // make sure it includes the (Y-shifted) origin
+      left = Math.min(left, 0);
+      right = Math.max(right, -1);
+      top = Math.min(top, 16);
+      bottom = Math.max(bottom, 15);
+    }
 
     return {
       x: left,
@@ -164,8 +166,8 @@ class Utils {
     }
   }
 
-  static animationRect(animation, { boxes = false }) {
-    const rects = animation.frames.map(f => this.frameRect(f, { boxes }));
+  static animationRect(animation) {
+    const rects = animation.frames.map(f => this.frameRect(f, {}));
     const x0 = Math.min(...rects.map(r => r.x));
     const y0 = Math.min(...rects.map(r => r.y));
     const x1 = Math.max(...rects.map(r => r.x + r.width));
@@ -253,8 +255,13 @@ class Utils {
     }
   }
 
-  static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes }) {
+  static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes, margin = 0 }) {
     const rect = this.frameRect(frame, {});
+    rect.x -= margin;
+    rect.y -= margin;
+    rect.width += 2 * margin;
+    rect.height += 2 * margin;
+
     ctx.canvas.width = rect.width * zoom;
     ctx.canvas.height = rect.height * zoom;
 
@@ -282,6 +289,25 @@ class Utils {
         return name;
       }
     }
+  }
+
+  static addNewTile(tree) {
+    tree.tileset.tilenames.push(this.newTileName(tree));
+    tree.tileset.tiles.push({
+      type: 'tile',
+      representation: Array.from({length: 8}).map(_ => Array(8).fill(0)),
+    });
+  }
+
+  static getAnimationsUsingTile(tree, name) {
+    const useTile = anim => anim.frames.some(frame => frame.sprites.some(sprite => sprite.tile === name));
+    let result = tree.animations.filter(useTile);
+    for (let k of MANDATORY_ANIMATION_NAMES) {
+      if (useTile(tree[k])) {
+        result.push(tree[k]);
+      }
+    }
+    return result;
   }
 }
 
@@ -586,11 +612,18 @@ app.component('stb-animation-frame', {
 
   computed: {
     rect() {
-      return Utils.frameRect(this.frame, { boxes: true });
+      let rect = Utils.frameRect(this.frame, { boxes: true, origin: true });
+      // Add a margin
+      rect.x -= 1;
+      rect.y -= 1;
+      rect.width += 2;
+      rect.height += 2;
+      return rect;
     },
   },
 
   mounted() {
+    this.$watch('frame.duration', (newval, oldval) => { if (newval < 1) this.frame.duration = oldval });
     this.$watch('frame.hurtbox.left', (newval, oldval) => { if (this.frame.hurtbox && newval > this.frame.hurtbox.right) this.frame.hurtbox.left = oldval });
     this.$watch('frame.hurtbox.top', (newval, oldval) => { if (this.frame.hurtbox && newval > this.frame.hurtbox.bottom) this.frame.hurtbox.top = oldval });
     this.$watch('frame.hurtbox.right', (newval, oldval) => { if (this.frame.hurtbox && newval < this.frame.hurtbox.left) this.frame.hurtbox.right = oldval });
@@ -776,8 +809,9 @@ app.component('stb-animation-frame', {
         const x = Math.floor((ev.pageX - ev.currentTarget.offsetLeft) / data.step);
         const y = Math.floor((ev.pageY - ev.currentTarget.offsetTop) / data.step);
         //XXX For now, prevent going beyond left/top, to avoid "infinite resizing"
-        sprite.x = this.rect.x + Math.max(x - data.x0, 0);
-        sprite.y = this.rect.y + Math.max(y - data.y0, 0);
+        // Take account of the 1px margin
+        sprite.x = this.rect.x + Math.max(x - data.x0, 1);
+        sprite.y = this.rect.y + Math.max(y - data.y0, 1);
       } else {
         ev.dataTransfer.dropEffect = 'none';
       }
@@ -874,6 +908,14 @@ app.component('stb-sprite-info', {
   props: ['sprite'],
   inject: ['tree'],
 
+  methods: {
+    newTile() {
+      Utils.addNewTile(this.tree);
+      const tilenames = this.tree.tileset.tilenames;
+      this.sprite.tile = tilenames[tilenames.length-1];
+    },
+  },
+
   template: `
     <div class="sprite-info">
       Position: (<input v-model="sprite.x" type="number" class="coordinate" />,<input v-model="sprite.y" type="number" class="coordinate" />)
@@ -886,9 +928,12 @@ app.component('stb-sprite-info', {
         <stb-tile-thumbnail v-for="(name, idx) in tree.tileset.tilenames"
           :tile="tree.tileset.tiles[idx]"
           :zoom="4"
-          @click="sprite.tile = name; tilePicker = false"
+          @click="sprite.tile = name"
           :class="{ selected: sprite.tile === name }"
          />
+        <div class="icon" @click="newTile()">
+          <i class="fas fa-plus-square" />
+        </div>
       </div>
     </div>
   `,
@@ -902,7 +947,7 @@ app.component('stb-frame-thumbnail', {
     drawFrame() {
       const ctx = this.$refs.canvas.getContext('2d');
       const palettes = this.conf.palettes(this.tree);
-      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2, background: this.conf.bgColor, palettes });
+      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2, background: this.conf.bgColor, palettes, margin: 1 });
     },
   },
 
@@ -1154,13 +1199,9 @@ const TilesetTab = {
     },
 
     newTile() {
-      const tileset = this.tree.tileset;
-      tileset.tilenames.push(Utils.newTileName(this.tree));
-      tileset.tiles.push({
-        type: 'tile',
-        representation: Array.from({length: 8}).map(_ => Array(8).fill(0)),
-      });
-      this.selectedTile = tileset.tiles[tileset.tiles.length-1];
+      Utils.addNewTile(this.tree);
+      const tiles = this.tree.tileset.tiles;
+      this.selectedTile = tiles[tiles.length-1];
     },
 
     dropNewTile(ev) {
@@ -1186,6 +1227,18 @@ const TilesetTab = {
         tileset.tiles.splice(idx, 1);
         tileset.tilenames.splice(idx, 1);
         this.selectedTile = null;
+      }
+    },
+  },
+
+  computed: {
+    selectedTileUses() {
+      if (this.selectedTile === null) {
+        return null;
+      } else {
+        const tileset = this.tree.tileset;
+        const idx = tileset.tiles.indexOf(this.selectedTile);
+        return Utils.getAnimationsUsingTile(this.tree, tileset.tilenames[idx]).length;
       }
     },
   },
@@ -1217,12 +1270,17 @@ const TilesetTab = {
          >
           <i class="fas fa-plus-square" />
         </div>
-        <div class="icon" @click="removeSelectedTile()" v-show="selectedTile">
-          <i class="fas fa-trash-alt" />
-        </div>
       </div>
-      <div v-if="selectedTile" class="selected-tile">
-        <stb-tile :tile.sync="selectedTile" palette="p0" class="bg-none" />
+      <div v-if="selectedTile" class="tile-details">
+        <div class="tile-canvas">
+          <stb-tile :tile.sync="selectedTile" palette="p0" class="bg-none" />
+        </div>
+        <div class="tile-info">
+          Animations using this tile: {{selectedTileUses}}
+          <span v-if="selectedTileUses == 0" class="icon" @click="removeSelectedTile">
+            <i class="fas fa-trash-alt" />
+          </span>
+        </div>
       </div>
     </div>
   `,
@@ -1373,7 +1431,7 @@ const AnimationTab = {
     <div v-if="animation">
       <h2>Animation</h2>
       <div>
-        <label>Name: <input v-model="animation.name" style="width: 40%;"/></label>
+        <label>Name: <input v-model="animation.name" style="width: 20%;"/></label>
       </div>
       <div class="frame-thumbnails">
         <dnd-list
