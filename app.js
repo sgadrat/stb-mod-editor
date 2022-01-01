@@ -1425,6 +1425,16 @@ const AnimationTab = {
         this.updateFrame(null);
       }
     },
+
+    isMandatoryAnimation() {
+      return !this.tree.animations.includes(this.animation);
+    },
+
+    removeAnimation() {
+      const idx = this.tree.animations.indexOf(this.animation);
+      this.tree.animations.splice(idx, 1);
+      this.$router.push('/animations');
+    },
   },
 
   template: `
@@ -1432,6 +1442,9 @@ const AnimationTab = {
       <h2>Animation</h2>
       <div>
         <label>Name: <input v-model="animation.name" style="width: 20%;"/></label>
+        <div v-if="!isMandatoryAnimation()" class="animation-delete" @click="removeAnimation()" title="Delete animation">
+          <i class="fas fa-trash-alt" />
+        </div>
       </div>
       <div class="frame-thumbnails">
         <dnd-list

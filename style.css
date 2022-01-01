@@ -353,6 +353,11 @@ div.sprite-info {
   outline: 2px solid red;
 }
 
+.animation-delete {
+  display: inline-block;
+  margin-left: 0.5em;
+}
+
 .frame-thumbnails {
   display: flex;
   align-items: center;
