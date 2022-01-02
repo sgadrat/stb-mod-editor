@@ -127,7 +127,7 @@ const PALETTE_NAMES = ['primary_colors', 'secondary_colors', 'alternate_colors']
 const MANDATORY_ANIMATION_NAMES = ['menu_select_animation', 'defeat_animation', 'victory_animation']
 
 class Utils {
-  static frameRect(frame, { boxes = false, origin = false }) {
+  static frameRect(frame, { boxes = false, origin = false, margin = 0 }) {
     const sprites_x = frame.sprites.map(s => s.x);
     const sprites_y = frame.sprites.map(s => s.y);
     let left = Math.min.apply(Math, sprites_x);
@@ -159,15 +159,15 @@ class Utils {
     }
 
     return {
-      x: left,
-      y: top,
-      width: right - left + 1,
-      height: bottom - top + 1,
+      x: left - margin,
+      y: top - margin,
+      width: right - left + 1 + 2 * margin,
+      height: bottom - top + 1 + 2 * margin,
     }
   }
 
-  static animationRect(animation) {
-    const rects = animation.frames.map(f => this.frameRect(f, {}));
+  static animationRect(animation, { margin = 0 }) {
+    const rects = animation.frames.map(f => this.frameRect(f, { margin }));
     const x0 = Math.min(...rects.map(r => r.x));
     const y0 = Math.min(...rects.map(r => r.y));
     const x1 = Math.max(...rects.map(r => r.x + r.width));
@@ -255,13 +255,8 @@ class Utils {
     }
   }
 
-  static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes, margin = 0 }) {
-    const rect = this.frameRect(frame, {});
-    rect.x -= margin;
-    rect.y -= margin;
-    rect.width += 2 * margin;
-    rect.height += 2 * margin;
-
+  static drawFrame(ctx, tree, frame, { zoom = 1, background, palettes, rect = null }) {
+    rect ||= this.frameRect(frame, {});
     ctx.canvas.width = rect.width * zoom;
     ctx.canvas.height = rect.height * zoom;
 
@@ -640,13 +635,7 @@ app.component('stb-animation-frame', {
 
   computed: {
     rect() {
-      let rect = Utils.frameRect(this.frame, { boxes: true, origin: true });
-      // Add a margin
-      rect.x -= 1;
-      rect.y -= 1;
-      rect.width += 2;
-      rect.height += 2;
-      return rect;
+      return Utils.frameRect(this.frame, { boxes: true, origin: true, margin: 1 });
     },
   },
 
@@ -968,14 +957,19 @@ app.component('stb-sprite-info', {
 });
 
 app.component('stb-frame-thumbnail', {
-  props: ['frame'],
+  props: ['frame', 'zoom', 'rect'],
   inject: ['tree', 'conf'],
 
   methods: {
     drawFrame() {
       const ctx = this.$refs.canvas.getContext('2d');
       const palettes = this.conf.palettes(this.tree);
-      return Utils.drawFrame(ctx, this.tree, this.frame, { zoom: 2, background: this.conf.bgColor, palettes, margin: 1 });
+      return Utils.drawFrame(ctx, this.tree, this.frame, {
+        zoom: this.zoom,
+        rect: this.rect,
+        background: this.conf.bgColor,
+        palettes,
+      });
     },
   },
 
@@ -1038,7 +1032,7 @@ app.component('stb-animation-thumbnail', {
     updateAnimation() {
       this.stopAnimation();
 
-      const rect = this.rect ? this.rect : Utils.animationRect(this.animation, {});
+      const rect = this.rect || Utils.animationRect(this.animation, {});
       const palettes = this.conf.palettes(this.tree);
 
       // Prepare the canvas
@@ -1364,6 +1358,13 @@ const AnimationTab = {
     }
   },
 
+  computed: {
+    rect() {
+      //XXX Rect is "aligned" on sprites, not invidual pixels
+      return Utils.animationRect(this.animation, { margin: 1 });
+    },
+  },
+
   created() {
     this.$watch(() => this.$route.params, () => this.updateAnimation());
     this.$watch('tree', () => this.updateAnimation());
@@ -1484,6 +1485,8 @@ const AnimationTab = {
           <template v-slot:item="props">
             <stb-frame-thumbnail
               :frame="props.item"
+              :zoom="2"
+              :rect="rect"
               :class="{ selected: props.item === selectedFrame }"
               @click="updateFrame(props.item)"
              />
