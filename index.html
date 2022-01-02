@@ -9,33 +9,7 @@
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.0/css/all.css">
   </head>
   <body>
-    <div id="app">
-      <div id="tree">
-        <div>
-          <input type="button" value="Download JSON" @click="downloadAsJson()" /><br/>
-          <input v-for="name in ['sinbad', 'kiki', 'pepper']"
-            type="button" :value="name"
-            @click="loadCharacterData('data/'+name+'.json')"
-            />
-        </div>
-        <ul>
-          <li><router-link to="/illustrations">Illustrations</router-link></li>
-          <li><router-link to="/tileset">Tileset</router-link></li>
-          <li><router-link to="/animations">Animations</router-link></li>
-          <li><router-link to="/colors">Color swaps</router-link></li>
-          <li><router-link to="/code">Source code</router-link></li>
-        </ul>
-        <p><router-link to="/help">Help</router-link></p>
-      </div>
-      <div id="toolbar">
-        <div>
-          <toolbar :conf.sync="conf" />
-        </div>
-      </div>
-      <div id="content" ref="content">
-        <router-view></router-view>
-      </div>
-    </div>
+    <div id="app"></div>
     <script src="app.js"></script>
   </body>
 </html>

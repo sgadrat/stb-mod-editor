@@ -459,6 +459,34 @@ const app = Vue.createApp({
       downloadJson(this.tree, this.tree.name + '.json');
     },
   },
+
+  template: `
+    <div id="tree">
+      <div>
+        <input type="button" value="Download JSON" @click="downloadAsJson()" /><br/>
+        <input v-for="name in ['sinbad', 'kiki', 'pepper']"
+          type="button" :value="name"
+          @click="loadCharacterData('data/'+name+'.json')"
+          />
+      </div>
+      <ul>
+        <li><router-link to="/illustrations">Illustrations</router-link></li>
+        <li><router-link to="/tileset">Tileset</router-link></li>
+        <li><router-link to="/animations">Animations</router-link></li>
+        <li><router-link to="/colors">Color swaps</router-link></li>
+        <li><router-link to="/code">Source code</router-link></li>
+      </ul>
+      <p><router-link to="/help">Help</router-link></p>
+    </div>
+    <div id="toolbar">
+      <div>
+        <toolbar :conf.sync="conf" />
+      </div>
+    </div>
+    <div id="content" ref="content">
+      <router-view></router-view>
+    </div>
+  `,
 });
 
 
