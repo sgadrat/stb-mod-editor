@@ -308,7 +308,7 @@ class Utils {
 
 
 class Conf {
-  color = 0;  // manually selected color
+  color = 1;  // manually selected color
   colorModifier = 0;  // color modified though keyboard modifiers
   colorSwap = 0;  // index of color swap
   bgColor = '#3CBCFC';  // background color, for transparency
@@ -396,11 +396,20 @@ const app = Vue.createApp({
     }
     document.addEventListener('keydown', this.keymodifierHandle);
     document.addEventListener('keyup', this.keymodifierHandle);
+
+    // Setup simple key bindings
+    this.keypressHandle = (ev) => {
+      if (ev.key == 'x') {
+        this.conf.color = this.conf.color == 3 ? 1 : this.conf.color + 1;
+      }
+    }
+    document.addEventListener('keypress', this.keypressHandle);
   },
 
   beforeUnmount() {
     document.removeEventListener('keydown', this.keymodifierHandle);
     document.removeEventListener('keyup', this.keymodifierHandle);
+    document.removeEventListener('keypress', this.keypressHandle);
   },
 
   methods: {
