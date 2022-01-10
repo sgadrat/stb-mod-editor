@@ -318,6 +318,10 @@ class Conf {
 
   static ZOOM_LEVELS = [2, 4, 8, 16, 24, 32, 48];
 
+  cycleColor() {
+    this.color = this.color == 3 ? 1 : this.color + 1;
+  }
+
   zoomStep(step) {
     const LEVELS = this.constructor.ZOOM_LEVELS
     const zoom = LEVELS.reduce((prev, cur) => (
@@ -330,6 +334,33 @@ class Conf {
 
   palettes(tree) {
     return Utils.getPalettes(tree, this.colorSwap);
+  }
+
+  toggleSelectTool() {
+    // For now there are only two tools, no need to store the previous one
+    if (this.tool !== 'select') {
+      this.tool = 'select';
+    } else {
+      this.tool = 'brush';
+    }
+  }
+
+  cycleGrid() {
+    if (this.grid == 'off') {
+      this.grid = 'tiles';
+    } else if (this.grid == 'tiles') {
+      this.grid = 'pixels';
+    } else {
+      this.grid = 'off';
+    }
+  }
+
+  toggleBoxes() {
+    if (this.boxes == 'off') {
+      this.boxes = 'on';
+    } else {
+      this.boxes = 'off';
+    }
   }
 }
 
@@ -385,8 +416,21 @@ const app = Vue.createApp({
   created() {
     // Setup simple key bindings
     this.keypressHandle = (ev) => {
-      if (ev.key == 'x') {
-        this.conf.color = this.conf.color == 3 ? 1 : this.conf.color + 1;
+      if (ev.target !== document.body) {
+        return;
+      }
+      if (ev.key == 'c') {
+        this.conf.cycleColor();
+      } else if (ev.key == '+') {
+        this.conf.zoomStep(+1);
+      } else if (ev.key == '-') {
+        this.conf.zoomStep(-1);
+      } else if (ev.key == 's') {
+        this.conf.toggleSelectTool();
+      } else if (ev.key == 'g') {
+        this.conf.cycleGrid();
+      } else if (ev.key == 'b') {
+        this.conf.toggleBoxes();
       }
     }
     document.addEventListener('keypress', this.keypressHandle);
@@ -489,24 +533,6 @@ app.component('toolbar', {
   },
 
   methods: {
-    changeGrid() {
-      if (this.conf.grid == 'off') {
-        this.conf.grid = 'tiles';
-      } else if (this.conf.grid == 'tiles') {
-        this.conf.grid = 'pixels';
-      } else {
-        this.conf.grid = 'off';
-      }
-    },
-
-    changeBoxes() {
-      if (this.conf.boxes == 'off') {
-        this.conf.boxes = 'on';
-      } else {
-        this.conf.boxes = 'off';
-      }
-    },
-
     colorSwapPalettes() {
       return Utils.getAllPalettes(this.tree);
     },
@@ -550,8 +576,8 @@ app.component('toolbar', {
       <button class="icon" @click="conf.tool = 'select'" :class="{ enabled: conf.tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
     </div>
     <div>
-      <button class="icon" @click="changeGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
-      <button class="icon" @click="changeBoxes()" :class="{ enabled: conf.boxes === 'on' }" title="Hitbox/hurtbox"><i class="fas fa-vector-square"/></button>
+      <button class="icon" @click="conf.cycleGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
+      <button class="icon" @click="conf.toggleBoxes()" :class="{ enabled: conf.boxes === 'on' }" title="Hitbox/hurtbox"><i class="fas fa-vector-square"/></button>
     </div>
   `,
 });
@@ -1651,6 +1677,8 @@ const HelpTab = {
         <ul>
           <li>Choose elements to edit from the left column</li>
           <li>Changes to a tile will propagate to everything that uses it</li>
+          <li>Use left click to draw with selected color</li>
+          <li>Use right click to draw with background color</li>
         </ul>
       </li>
       <li>
@@ -1692,6 +1720,17 @@ const HelpTab = {
           <li>Use <i class="fas fa-arrows-alt-v"/> to flip the sprite vertically</li>
           <li>Use <i class="fas fa-palette"/> to toggle between primary and secondary palette</li>
           <li>Use <i class="fas fa-layer-group"/> to toggle between foreground and background</li>
+        </ul>
+      </li>
+      <li>
+        Keyboard shortcuts
+        <ul>
+          <li><kbd>c</kbd> Cycle through draw color</li>
+          <li><kbd>+</kbd> Zoom in</li>
+          <li><kbd>-</kbd> Zoom out</li>
+          <li><kbd>s</kbd> Toggle select tool</li>
+          <li><kbd>g</kbd> Cycle through grid modes</li>
+          <li><kbd>b</kbd> Toggle display of hitboxes and hurtboxes</li>
         </ul>
       </li>
     </ul>
