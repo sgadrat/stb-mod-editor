@@ -309,7 +309,6 @@ class Utils {
 
 class Conf {
   color = 1;  // manually selected color
-  colorModifier = 0;  // color modified though keyboard modifiers
   colorSwap = 0;  // index of color swap
   bgColor = '#3CBCFC';  // background color, for transparency
   zoom = 16;  // zoom value (display pixel per tile pixel)
@@ -318,10 +317,6 @@ class Conf {
   boxes = 'on';  // hitbox/hurtbox mode (off, on)
 
   static ZOOM_LEVELS = [2, 4, 8, 16, 24, 32, 48];
-
-  drawColor() {
-    return this.color ^ this.colorModifier;
-  }
 
   zoomStep(step) {
     const LEVELS = this.constructor.ZOOM_LEVELS
@@ -388,15 +383,6 @@ const app = Vue.createApp({
   },
 
   created() {
-    // Setup handlers for changing color with Ctrl/Shift
-    this.keymodifierHandle = (ev) => {
-      if (ev.key === "Control" || ev.key === "Shift") {
-        this.conf.colorModifier = ev.ctrlKey + 2 * ev.shiftKey;
-      }
-    }
-    document.addEventListener('keydown', this.keymodifierHandle);
-    document.addEventListener('keyup', this.keymodifierHandle);
-
     // Setup simple key bindings
     this.keypressHandle = (ev) => {
       if (ev.key == 'x') {
@@ -407,8 +393,6 @@ const app = Vue.createApp({
   },
 
   beforeUnmount() {
-    document.removeEventListener('keydown', this.keymodifierHandle);
-    document.removeEventListener('keyup', this.keymodifierHandle);
     document.removeEventListener('keypress', this.keypressHandle);
   },
 
@@ -538,7 +522,7 @@ app.component('toolbar', {
     <table class="color-picker">
       <tr
         v-for="c in [0, 1, 2, 3]"
-        :class="{ 'active-color': c === conf.drawColor() }"
+        :class="{ 'active-color': c === conf.color }"
         @click="conf.color = c"
        >
         <td :class="c == 0 ? 'bg-none' : 'bg-p0-c'+c" />
@@ -588,7 +572,7 @@ app.component('stb-tile', {
     drawPixel(x, y) {
       const px = this.flip?.[0] ? 7 - x : x;
       const py = this.flip?.[1] ? 7 - y : y;
-      this.tile.representation[py][px] = this.conf.drawColor();
+      this.tile.representation[py][px] = this.conf.color;
     },
 
     clearPixel(x, y) {
@@ -1675,7 +1659,6 @@ const HelpTab = {
           <li>The toolbar is the vertical panel on the left side</li>
           <li>Use <i class="fas fa-paint-brush"/> tool to draw</li>
           <li>Select drawing color from the palette</li>
-          <li>When drawing, use Control and/or Shift to modify color bitmask</li>
           <li>Use <i class="fas fa-palette"/> to change palette used for display and drawing</li>
           <li>Use <i class="fas fa-image"/> to select the background color, for transparent pixels</li>
           <li>Use <i class="fas fa-border-all"/> to change grid and overlays: all borders / tile borders / nothing</li>
