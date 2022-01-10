@@ -582,9 +582,17 @@ app.component('stb-tile', {
       this.tile.representation[py][px] = this.conf.drawColor();
     },
 
+    clearPixel(x, y) {
+      const px = this.flip?.[0] ? 7 - x : x;
+      const py = this.flip?.[1] ? 7 - y : y;
+      this.tile.representation[py][px] = 0;
+    },
+
     mouseMove(ev, x, y) {
       if (ev.buttons & 1) {
         this.drawPixel(x, y);
+      } else if (ev.buttons & 2) {
+        this.clearPixel(x, y);
       }
     },
   },
@@ -596,6 +604,7 @@ app.component('stb-tile', {
           :class="getColorClass(x, y)"
           @mousemove="mouseMove($event, x, y)"
           @click="drawPixel(x, y)"
+          @contextmenu.prevent="clearPixel(x, y)"
          />
       </tr>
     </table>
@@ -842,6 +851,7 @@ app.component('stb-animation-frame', {
           <tr v-for="y in rect.height">
             <td v-for="x in rect.width"
               @click.capture="conf.tool === 'select' && (selectedSprite = null, $event.stopPropagation())"
+              @contextmenu.prevent
              />
           </tr>
         </table>
