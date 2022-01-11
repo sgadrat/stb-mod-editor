@@ -502,21 +502,21 @@ const app = Vue.createApp({
           />
       </div>
       <ul>
-        <li><router-link to="/illustrations">Illustrations</router-link></li>
-        <li><router-link to="/tileset">Tileset</router-link></li>
-        <li><router-link to="/animations">Animations</router-link></li>
-        <li><router-link to="/colors">Color swaps</router-link></li>
-        <li><router-link to="/code">Source code</router-link></li>
+        <li><i class="fas fa-fw fa-portrait" /> <router-link to="/illustrations">Illustrations</router-link></li>
+        <li><i class="fas fa-fw fa-th" /> <router-link to="/tileset">Tileset</router-link></li>
+        <li><i class="fas fa-fw fa-images" /> <router-link to="/animations">Animations</router-link></li>
+        <li><i class="fas fa-fw fa-palette" /> <router-link to="/colors">Color swaps</router-link></li>
+        <li><i class="fas fa-fw fa-code" /> <router-link to="/code">Source code</router-link></li>
       </ul>
       <p><router-link to="/help">Help</router-link></p>
     </div>
     <div id="toolbar">
-      <div>
-        <toolbar :conf.sync="conf" />
-      </div>
+      <toolbar :conf.sync="conf" />
     </div>
-    <div id="content" ref="content">
-      <router-view></router-view>
+    <div id="content-container">
+      <div id="content" ref="content">
+        <router-view></router-view>
+      </div>
     </div>
   `,
 });
