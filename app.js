@@ -167,7 +167,9 @@ class Utils {
   }
 
   static animationRect(animation, { margin = 0 }) {
-    const rects = animation.frames.map(f => this.frameRect(f, { margin }));
+    const rects = animation.frames
+      .filter(f => f.sprites.length !== 0)
+      .map(f => this.frameRect(f, { margin }));
     const x0 = Math.min(...rects.map(r => r.x));
     const y0 = Math.min(...rects.map(r => r.y));
     const x1 = Math.max(...rects.map(r => r.x + r.width));
