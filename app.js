@@ -368,6 +368,20 @@ class CharacterFileStorage {
       return JSON.parse(data);
     }
   }
+
+  uniqueFileName(name) {
+    const index = this.loadIndex();
+    if (index[name] === undefined) {
+      return name;
+    }
+    // Note: add an upper limit just in case, to avoid infinite loops
+    for (let i = 1; i < 1000; ++i) {
+      const new_name = `${name} ${i}`;
+      if (index[new_name] === undefined) {
+        return new_name;
+      }
+    }
+  }
 }
 
 
@@ -579,17 +593,7 @@ const app = Vue.createApp({
         .then(response => response.json())
         .then(data => {
           const index = this.storage.loadIndex();
-          if (index[name] === undefined) {
-            this.currentCharacterFile = name;
-          } else {
-            for (let i = 1;; ++i) {
-              const new_name = `${name} ${i}`;
-              if (index[new_name] === undefined) {
-                this.currentCharacterFile = new_name;
-                break;
-              }
-            }
-          }
+          this.currentCharacterFile = this.storage.uniqueFileName(name);
           this.loadCharacterData(data);
         })
         .catch(err => console.error(err));
@@ -617,6 +621,23 @@ const app = Vue.createApp({
 
     deleteCharacterFile(name) {
       this.storage.removeCharacterFile(name);
+    },
+
+    importCharacterFile(ev) {
+      console.log("loading character data from uploaded file");
+      const reader = new FileReader();
+      reader.addEventListener('load', ev => {
+        const text = ev.target.result;
+        const data = JSON.parse(text);
+        if (typeof data !== 'object' || data.name === undefined) {
+          console.error("invalid character data");
+          return;
+        }
+        const name = this.storage.uniqueFileName(data.name);
+        this.storage.setCharacterFile(name, data);
+        this.loadCharacterFile(name);
+      });
+      reader.readAsText(ev.target.files[0]);
     },
 
     updateColorSwapRule() {
@@ -674,6 +695,8 @@ const app = Vue.createApp({
           <i class="fas fa-w fa-upload" title="Load" @click="loadCurrentCharacterFile()" />
           <i class="fas fa-w fa-download" title="Save" @click="saveCurrentCharacterFile()" />
           <i class="fas fa-w fa-file-export" title="Download as JSON" @click="downloadAsJson()" />
+          <i class="fas fa-w fa-file-import" title="Import a JSON" @click="$refs.importCharacterFile.click()" />
+          <input type="file" hidden ref="importCharacterFile" @change="importCharacterFile" />
         </div>
         <ul>
           <li v-for="info in characterFileIndex" @click="loadCharacterFile(info.name)">{{ info.name }}

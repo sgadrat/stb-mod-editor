@@ -75,6 +75,7 @@ input.damages { width: 3em; }
   margin-right: 0.2em;
 }
 .tree-file-bar i.fas {
+  font-size: 90%;
   padding: 0.2em;
 }
 
