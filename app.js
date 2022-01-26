@@ -317,8 +317,36 @@ class Conf {
   tool = 'brush';  // active tool (brush, select)
   grid = 'tiles';  // grid mode (off, tiles, pixels)
   boxes = 'on';  // hitbox/hurtbox mode (off, on)
+  // Toolbar configuration (see resetToolbar())
+  toolbar = null;
 
   static ZOOM_LEVELS = [2, 4, 8, 16, 24, 32, 48];
+
+  constructor() {
+    this.resetToolbar();
+  }
+
+  resetToolbar() {
+    this.toolbar = {
+      cssPalettes: ['picker-p0', 'picker-p1'],
+      gridModes: ['off', 'tiles', 'pixels'],
+      // Hack for illustrations
+      // The large illustration palette is very similar to the token one, but
+      // with colors 0 and 1 swapped and its background is not color 0.
+      // Swap the color numbers without changing display when mouse is over the large illustration.
+      illustrationHack: false,
+    }
+  }
+
+  setIllustrationHack(enable) {
+    if (this.toolbar.illustrationHack === enable) {
+      return;
+    }
+    if (this.color < 2) {
+      this.color = 1 - this.color;  // swap
+    }
+    this.toolbar.illustrationHack = enable;
+  }
 
   cycleColor() {
     this.color = this.color == 3 ? 1 : this.color + 1;
@@ -348,13 +376,9 @@ class Conf {
   }
 
   cycleGrid() {
-    if (this.grid == 'off') {
-      this.grid = 'tiles';
-    } else if (this.grid == 'tiles') {
-      this.grid = 'pixels';
-    } else {
-      this.grid = 'off';
-    }
+    const modes = this.toolbar.gridModes;
+    // Note: works if 'idx == -1'
+    this.grid = modes[(modes.indexOf(this.grid) + 1) % modes.length];
   }
 
   toggleBoxes() {
@@ -413,6 +437,11 @@ const app = Vue.createApp({
         classes.toggle('tool-' + x, val === x);
       }
     }, { immediate: true });
+
+    // Reset toolbar when changing tab
+    this.$watch('$route', () => {
+      this.conf.resetToolbar();
+    });
   },
 
   created() {
@@ -549,12 +578,20 @@ app.component('toolbar', {
   template: `
     <table class="color-picker">
       <tr
+        v-if="conf.toolbar.illustrationHack"
+        v-for="c in [1, 0, 2, 3]"
+        :class="{ 'active-color': c === conf.color }"
+        @click="conf.color = c"
+       >
+        <td v-for="name of conf.toolbar.cssPalettes" :class="name + '-c' + [1, 0, 2, 3][c]" />
+      </tr>
+      <tr
+        v-else
         v-for="c in [0, 1, 2, 3]"
         :class="{ 'active-color': c === conf.color }"
         @click="conf.color = c"
        >
-        <td :class="c == 0 ? 'bg-none' : 'bg-p0-c'+c" />
-        <td :class="c == 0 ? 'bg-none' : 'bg-p1-c'+c" />
+        <td v-for="name of conf.toolbar.cssPalettes" :class="name + '-c' + c" />
       </tr>
     </table>
     <div>
@@ -564,8 +601,7 @@ app.component('toolbar', {
     <div class="palette-picker" v-if="palettePicker">
       <table v-if="tree" v-for="(palettes, swap) of colorSwapPalettes()" @click="conf.colorSwap = swap; palettePicker = false">
         <tr v-for="i in [0, 1, 2]">
-          <td :style="{ 'background-color': palettes[0][i] }" />
-          <td :style="{ 'background-color': palettes[1][i] }" />
+          <td v-for="palette of palettes" :style="{ 'background-color': palette[i] }" />
         </tr>
       </table>
     </div>
@@ -1214,12 +1250,16 @@ app.component('dnd-list', {
 
 
 const IllustrationsTab = {
-  inject: ['tree'],
+  inject: ['tree', 'conf'],
 
   methods: {
     illustrationTiles(illustration, width, height) {
       return Array.from({length: height}, (_, y) => Array.from({length: width}, (_, x) => illustration.tiles[y * width + x]));
     },
+  },
+
+  created() {
+    this.conf.toolbar.cssPalettes = ['bg-illu-token', 'bg-illu-small'];
   },
 
   template: `
@@ -1229,19 +1269,29 @@ const IllustrationsTab = {
       <h2>Small </h2> 
       <stb-illustration :tiles.sync="tree.illustration_small.tiles" width="2" height="2" palette="illu-small" />
       <h2>Large</h2> 
-      <stb-illustration :tiles.sync="tree.illustration_large.tiles" width="6" height="8" palette="illu-large" />
+      <stb-illustration :tiles.sync="tree.illustration_large.tiles" width="6" height="8" palette="illu-large"
+        @mouseenter="conf.setIllustrationHack(true)"
+        @mouseleave="conf.setIllustrationHack(false)"
+        />
     </div>
   `,
 }
 
 
 const TilesetTab = {
-  inject: ['tree'],
+  inject: ['tree', 'conf'],
 
   data() {
     return {
       selectedTile: null,
     }
+  },
+
+  created() {
+    if (this.conf.grid !== 'pixels') {
+      this.conf.grid = 'off';
+    }
+    this.conf.toolbar.gridModes = ['off', 'pixels'];
   },
 
   methods: {

@@ -432,6 +432,16 @@ div.sprite-info {
 .bg-p2-c2 { background-color: var(--color-p2-c2); }
 .bg-p2-c3 { background-color: var(--color-p2-c3); }
 
+.picker-p0-c0 { background-color: var(--color-none); }
+.picker-p0-c1 { background-color: var(--color-p0-c1); }
+.picker-p0-c2 { background-color: var(--color-p0-c2); }
+.picker-p0-c3 { background-color: var(--color-p0-c3); }
+
+.picker-p1-c0 { background-color: var(--color-none); }
+.picker-p1-c1 { background-color: var(--color-p1-c1); }
+.picker-p1-c2 { background-color: var(--color-p1-c2); }
+.picker-p1-c3 { background-color: var(--color-p1-c3); }
+
 
 .bg-illu-token-c0 { background-color: #3CBCFC; }
 .bg-illu-token-c1 { background-color: #000000; }
