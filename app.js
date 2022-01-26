@@ -1897,6 +1897,18 @@ const HelpTab = {
         </ul>
       </li>
       <li>
+        Managing files
+        <ul>
+          <li>Use <i class="fas fa-file-import"/> to import JSON file</li>
+          <li>Use <i class="fas fa-file-export"/> to export the current file as JSON</li>
+          <li>Use <i class="fas fa-download"/> to save a file; name can be changed</li>
+          <li>Use <i class="fas fa-upload"/> to reload the current file</li>
+          <li>Click on a file name to reload it</li>
+          <li>Use <i class="fas fa-trash-alt"/> to remove a saved file</li>
+          <li>Files preceded with <i class="fa-external-link-alt" /> are loaded from a predefined URL.</li>
+        </ul>
+      </li>
+      <li>
         Toolbar
         <ul>
           <li>The toolbar is the vertical panel on the left side</li>
