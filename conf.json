@@ -1,7 +1,5 @@
 {
   "characterUrls": {
-    "sinbad": "data/sinbad.json",
-    "kiki": "data/kiki.json",
-    "pepper": "data/pepper.json"
+    "sinbad": "data/sinbad.json"
   }
 }
