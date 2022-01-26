@@ -224,6 +224,9 @@ class Utils {
 
   static drawSingleSprite(ctx, tree, sprite, { zoom = 1, palettes, x = 0, y = 0 }) {
       const tile = this.getTileByName(tree, sprite.tile);
+      if (tile === undefined) {
+        return;  // avoid error when reloading a tree
+      }
       const palette = palettes[sprite.attr & 0x1];
       const flip_x = sprite.attr & 0x40;
       const flip_y = sprite.attr & 0x80;
@@ -305,6 +308,65 @@ class Utils {
       }
     }
     return result;
+  }
+}
+
+
+// Manage storage of character data
+//
+// Each "file" is stored in key `stbeditor.data.<name>`.
+// An index is stored as `stbeditor.index`
+class CharacterFileStorage {
+  constructor(storage, onchange) {
+    this.storage = storage;
+    this.onchange = onchange;
+
+    window.onstorage
+  }
+
+  setCharacterFile(name, data) {
+    const index = this.loadIndex();
+    index[name] = {'updated_at': Date.now()};
+    this.storage.setItem(`stbeditor.data.${name}`, JSON.stringify(data));
+    this.storage.setItem('stbeditor.index', JSON.stringify(index));
+    this.onchange();
+  }
+
+  getCharacterFile(name) {
+    const data = this.storage.getItem(`stbeditor.data.${name}`);
+    if (data === null) {
+      return null;
+    } else {
+      return JSON.parse(data);
+    }
+  }
+
+  removeCharacterFile(name) {
+    const index = this.loadIndex();
+    delete index[name];
+    this.storage.removeItem(`stbeditor.data.${name}`);
+    this.storage.setItem('stbeditor.index', JSON.stringify(index));
+    this.onchange();
+  }
+
+  clear() {
+    for (let i = 0; i < this.storage.length; ++i) {
+      const key = this.storage.key(i);
+      if (key.startsWith('stbeditor.')) {
+        this.removeItem(key);
+      }
+    }
+    this.storage.clear();
+  }
+
+  loadIndex() {
+    const data = this.storage.getItem('stbeditor.index');
+    if (data === null) {
+      return {};
+    } else {
+      // Assume JSON data is valid
+      return JSON.parse(data);
+    }
   }
 }
 
@@ -396,6 +458,10 @@ const app = Vue.createApp({
     return {
       tree: null,
       conf: new Conf(),
+      characterFileIndex: [],
+      characterUrls: {},
+      currentCharacterFile: null,
+      routerKey: 0,  // dummy value used to force a router refresh
     }
   },
 
@@ -407,7 +473,7 @@ const app = Vue.createApp({
   },
 
   mounted() {
-    this.fetchCharacterData('data/sinbad.json');  //TODO change default
+    this.fetchStaticConf();
 
     // Setup stylesheet for dynamic styling
     let style = document.createElement("style");
@@ -465,25 +531,92 @@ const app = Vue.createApp({
       }
     }
     document.addEventListener('keypress', this.keypressHandle);
+
+    // Setup the storage
+    this.storage = new CharacterFileStorage(localStorage, this.reloadCharacterFileIndex);
+    this.storageHandle = window.addEventListener('storage', ev => {
+      if (ev.storageArea !== this.storage.storage) {
+        return;
+      }
+      if (ev.key !== null && ev.key !== 'stbeditor.index') {
+        return;
+      }
+      this.reloadCharacterFileIndex();
+    });
+    this.reloadCharacterFileIndex();
   },
 
   beforeUnmount() {
     document.removeEventListener('keypress', this.keypressHandle);
+    window.removeEventListener('storage', this.storageHandle);
   },
 
   methods: {
-    fetchCharacterData(url) {
-      console.debug(`fetch character data: ${url}`);
-      //TODO update URL, use local storage
+    fetchStaticConf() {
+      console.debug('fetch static configuration');
+      fetch('conf.json')
+        .then(response => response.json())
+        .then(data => { this.characterUrls = data.characterUrls; })
+        .catch(err => console.info(`cannot load static configuration: ${err}`));
+    },
+
+    loadCharacterData(data) {
+      this.tree = data;
+      this.routerKey += 1;
+    },
+
+    loadCharacterFile(name) {
+      const data = this.storage.getCharacterFile(name);
+      if (data !== null) {
+        this.currentCharacterFile = name;
+        this.loadCharacterData(data);
+      }
+    },
+
+    loadCharacterUrl(name, url) {
+      console.debug(`load character data from URL: ${url}`);
       fetch(url)
         .then(response => response.json())
-        .then(data => { this.tree = data })
+        .then(data => {
+          const index = this.storage.loadIndex();
+          if (index[name] === undefined) {
+            this.currentCharacterFile = name;
+          } else {
+            for (let i = 1;; ++i) {
+              const new_name = `${name} ${i}`;
+              if (index[new_name] === undefined) {
+                this.currentCharacterFile = new_name;
+                break;
+              }
+            }
+          }
+          this.loadCharacterData(data);
+        })
         .catch(err => console.error(err));
     },
 
-    loadCharacterData(url) {
-      this.fetchCharacterData(url);
-      this.$router.push('/');
+    loadCurrentCharacterFile() {
+      if (this.currentCharacterFile !== null && this.currentCharacterFile !== '') {
+        this.loadCharacterFile(this.currentCharacterFile);
+      }
+    },
+
+    saveCurrentCharacterFile() {
+      if (this.currentCharacterFile !== null && this.currentCharacterFile !== '') {
+        this.storage.setCharacterFile(this.currentCharacterFile, this.tree);
+      }
+    },
+
+    reloadCharacterFileIndex() {
+      const index = Object.entries(this.storage.loadIndex())
+        .map(([name, info]) => Object.assign(info, {name: name}));
+      // Sort by data, newest first
+      index.sort((a, b) => a.updated_at < b.updated_at);
+      this.characterFileIndex = index;
+    },
+
+    deleteCharacterFile(name) {
+      this.storage.removeCharacterFile(name);
     },
 
     updateColorSwapRule() {
@@ -525,28 +658,36 @@ const app = Vue.createApp({
 
   template: `
     <div id="tree">
-      <div>
-        <input type="button" value="Download JSON" @click="downloadAsJson()" /><br/>
-        <input v-for="name in ['sinbad', 'kiki', 'pepper']"
-          type="button" :value="name"
-          @click="loadCharacterData('data/'+name+'.json')"
-          />
+      <div class="tree-links">
+        <ul>
+          <li><i class="fas fa-fw fa-portrait" /> <router-link to="/illustrations">Illustrations</router-link></li>
+          <li><i class="fas fa-fw fa-th" /> <router-link to="/tileset">Tileset</router-link></li>
+          <li><i class="fas fa-fw fa-images" /> <router-link to="/animations">Animations</router-link></li>
+          <li><i class="fas fa-fw fa-palette" /> <router-link to="/colors">Color swaps</router-link></li>
+          <li><i class="fas fa-fw fa-code" /> <router-link to="/code">Source code</router-link></li>
+        </ul>
+        <p><router-link to="/help">Help</router-link></p>
       </div>
-      <ul>
-        <li><i class="fas fa-fw fa-portrait" /> <router-link to="/illustrations">Illustrations</router-link></li>
-        <li><i class="fas fa-fw fa-th" /> <router-link to="/tileset">Tileset</router-link></li>
-        <li><i class="fas fa-fw fa-images" /> <router-link to="/animations">Animations</router-link></li>
-        <li><i class="fas fa-fw fa-palette" /> <router-link to="/colors">Color swaps</router-link></li>
-        <li><i class="fas fa-fw fa-code" /> <router-link to="/code">Source code</router-link></li>
-      </ul>
-      <p><router-link to="/help">Help</router-link></p>
+      <div class="tree-files">
+        <div class="tree-file-bar">
+          <input v-model.trim="currentCharacterFile" required/>
+          <i class="fas fa-w fa-upload" title="Load" @click="loadCurrentCharacterFile()" />
+          <i class="fas fa-w fa-download" title="Save" @click="saveCurrentCharacterFile()" />
+          <i class="fas fa-w fa-file-export" title="Download as JSON" @click="downloadAsJson()" />
+        </div>
+        <ul>
+          <li v-for="info in characterFileIndex" @click="loadCharacterFile(info.name)">{{ info.name }}
+            <i class="fas fa-trash-alt" style="float: right" @click="deleteCharacterFile(info.name)" /></li>
+          <li v-for="(url, name) in characterUrls" @click="loadCharacterUrl(name, url)"><i class="fas fa-external-link-alt"/> {{ name }}</li>
+        </ul>
+      </div>
     </div>
     <div id="toolbar">
       <toolbar :conf.sync="conf" />
     </div>
     <div id="content-container">
       <div id="content" ref="content">
-        <router-view></router-view>
+        <router-view :key="routerKey"></router-view>
       </div>
     </div>
   `,
@@ -1147,7 +1288,6 @@ app.component('stb-animation-thumbnail', {
   mounted() {
     this.interval = null;
     Vue.watchEffect(() => this.updateAnimation());
-    //this.updateAnimation();
   },
 
   beforeUnmount() {

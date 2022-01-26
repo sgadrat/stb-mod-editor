@@ -56,18 +56,44 @@ input.coordinate { width: 3.5em; }
 input.force { width: 4em; }
 input.damages { width: 3em; }
 
-#tree ul {
+.tree-links ul {
   list-style-type: none;
   font-size: 120%;
   padding: 0;
 }
 
-#tree ul i.fas {
+.tree-links ul i.fas {
   font-size: 90%;
   margin-left: 0.1em;
 }
-#tree li {
+.tree-links li {
   margin: 0.3em 0.2em;
+}
+
+.tree-file-bar input {
+  width: 50%;
+  margin-right: 0.2em;
+}
+.tree-file-bar i.fas {
+  padding: 0.2em;
+}
+
+.tree-files ul {
+  list-style-type: none;
+  padding: 0;
+}
+.tree-files ul i.fas {
+  font-size: 90%;
+  margin-right: 0.1em;
+}
+.tree-files li {
+  padding: 0.1em;
+  margin: 0;
+  margin-left: 0.5em;
+  cursor: default;
+}
+.tree-files li:hover {
+  background-color: #ddd;
 }
 
 
