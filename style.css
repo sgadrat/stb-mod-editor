@@ -191,6 +191,10 @@ input.damages { width: 3em; }
   outline-offset: -2px;
 }
 
+.color-swaps .preview {
+  margin-top: 2em;
+}
+
 
 table.stb-tile {
   box-sizing: border-box;

@@ -1256,7 +1256,7 @@ app.component('stb-sprite-thumbnail', {
 });
 
 app.component('stb-animation-thumbnail', {
-  props: ['animation', 'zoom', 'rect'],
+  props: ['animation', 'zoom', 'rect', 'swap'],
   inject: ['tree', 'conf'],
 
   methods: {
@@ -1264,7 +1264,8 @@ app.component('stb-animation-thumbnail', {
       this.stopAnimation();
 
       const rect = this.rect || Utils.animationRect(this.animation, {});
-      const palettes = this.conf.palettes(this.tree);
+      const swap = this.swap === undefined ? this.conf.colorSwap : this.swap;
+      const palettes = Utils.getPalettes(this.tree, swap);
 
       // Prepare the canvas
       const canvas = this.$refs.canvas;
@@ -1757,13 +1758,20 @@ const AnimationTab = {
 
 
 const ColorsTab = {
-  inject: ['tree'],
+  inject: ['tree', 'conf'],
 
   data() {
     return {
-      selectedSwap: null,
+      selectedSwap: this.conf.colorSwap,
       selectedPalette: 0,
       selectedColor: 1,
+      previewedAnimationName: null,
+    }
+  },
+
+  created() {
+    if (this.tree && !this.previewedAnimationName) {
+      this.previewedAnimationName = this.tree[MANDATORY_ANIMATION_NAMES[0]].name;
     }
   },
 
@@ -1780,6 +1788,10 @@ const ColorsTab = {
       const k = PALETTE_NAMES[this.selectedPalette];
       this.tree.color_swaps[k][this.selectedSwap].colors[this.selectedColor] = 16 * i + j;
     },
+
+    getAnimations() {
+      return MANDATORY_ANIMATION_NAMES.map(x => this.tree[x]).concat(this.tree.animations);
+    },
   },
 
   computed: {
@@ -1793,6 +1805,14 @@ const ColorsTab = {
       }
       const k = PALETTE_NAMES[this.selectedPalette];
       return this.tree.color_swaps[k][this.selectedSwap].colors[this.selectedColor];
+    },
+
+    previewedAnimation() {
+      return Utils.getAnimationByName(this.tree, this.previewedAnimationName);
+    },
+
+    previewedAnimationRect() {
+      return Utils.animationRect(this.previewedAnimation, { margin: 2 });
     },
   },
 
@@ -1832,6 +1852,21 @@ const ColorsTab = {
               </td>
             </tr>
           </table>
+        </div>
+      </div>
+      <div class="preview">
+        <label>Preview animation: </label>
+        <select v-model="previewedAnimationName">
+          <option v-for="anim in getAnimations()" :value="anim.name">{{ anim.name }}</option>
+        </select>
+        <div>
+          <stb-animation-thumbnail
+            v-if="previewedAnimationName"
+            :animation="previewedAnimation"
+            :zoom="2"
+            :rect="previewedAnimationRect"
+            :swap="selectedSwap"
+           />
         </div>
       </div>
     </div>
