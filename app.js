@@ -309,6 +309,15 @@ class Utils {
     }
     return result;
   }
+
+  static newAnimationName(tree, prefix) {
+    for (let i = 0; ; ++i) {
+      name = i == 0 ? prefix : prefix + i;
+      if (this.getAnimationByName(tree, name) === undefined) {
+        return name;
+      }
+    }
+  }
 }
 
 
@@ -1704,6 +1713,14 @@ const AnimationTab = {
       return !this.tree.animations.includes(this.animation);
     },
 
+    duplicateAnimation() {
+      const animation = cloneData(this.animation);
+      animation.name = Utils.newAnimationName(this.tree, this.animation.name + '_copy');
+      const idx = this.tree.animations.indexOf(this.animation);
+      this.tree.animations.splice(idx + 1, 0, animation);
+      this.$router.push(`/animations/${animation.name}`);
+    },
+
     removeAnimation() {
       const idx = this.tree.animations.indexOf(this.animation);
       this.tree.animations.splice(idx, 1);
@@ -1716,6 +1733,9 @@ const AnimationTab = {
       <h2>Animation</h2>
       <div>
         <label>Name: <input v-model="animation.name" style="width: 20%;"/></label>
+        <div class="animation-duplicate" @click="duplicateAnimation()" title="Duplicate animation">
+          <i class="fas fa-clone" />
+        </div>
         <div v-if="!isMandatoryAnimation()" class="animation-delete" @click="removeAnimation()" title="Delete animation">
           <i class="fas fa-trash-alt" />
         </div>

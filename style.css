@@ -401,6 +401,10 @@ div.sprite-info {
   outline: 2px solid red;
 }
 
+.animation-duplicate {
+  display: inline-block;
+  margin-left: 0.5em;
+}
 .animation-delete {
   display: inline-block;
   margin-left: 0.5em;
