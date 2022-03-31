@@ -1505,17 +1505,40 @@ const TilesetTab = {
         this.selectedTile = null;
       }
     },
+
+    setSelectedTileName(ev) {
+      const name = ev.target.value;
+      const idx = this.selectedTileIndex;
+      if (idx !== null) {
+        this.tree.tileset.tilenames[idx] = name;
+      }
+    },
   },
 
   computed: {
-    selectedTileUses() {
+    selectedTileIndex() {
       if (this.selectedTile === null) {
         return null;
       } else {
-        const tileset = this.tree.tileset;
-        const idx = tileset.tiles.indexOf(this.selectedTile);
-        return Utils.getAnimationsUsingTile(this.tree, tileset.tilenames[idx]).length;
+        const idx = this.tree.tileset.tiles.indexOf(this.selectedTile);
+        return idx === -1 ? null : idx;
       }
+    },
+
+    selectedTileName() {
+      const idx = this.selectedTileIndex;
+      if (this.selectedTile === null) {
+        return null;
+      }
+      return this.tree.tileset.tilenames[idx];
+    },
+
+    selectedTileUses() {
+      const idx = this.selectedTileIndex;
+      if (this.selectedTile === null) {
+        return null;
+      }
+      return Utils.getAnimationsUsingTile(this.tree, this.tree.tileset.tilenames[idx]).length;
     },
   },
 
@@ -1552,10 +1575,15 @@ const TilesetTab = {
           <stb-tile :tile.sync="selectedTile" palette="p0" class="bg-none" />
         </div>
         <div class="tile-info">
-          Animations using this tile: {{selectedTileUses}}
-          <span v-if="selectedTileUses == 0" class="icon" @click="removeSelectedTile">
-            <i class="fas fa-trash-alt" />
-          </span>
+          <div>
+            <label>Name: <input :value="selectedTileName" @input="setSelectedTileName" style="width: 20%;"/></label>
+          </div>
+          <div>
+            Animations using this tile: {{selectedTileUses}}
+            <span v-if="selectedTileUses == 0" class="icon" @click="removeSelectedTile">
+              <i class="fas fa-trash-alt" />
+            </span>
+          </div>
         </div>
       </div>
     </div>
