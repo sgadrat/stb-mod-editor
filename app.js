@@ -1507,10 +1507,26 @@ const TilesetTab = {
     },
 
     setSelectedTileName(ev) {
-      const name = ev.target.value;
+      const new_name = ev.target.value;
       const idx = this.selectedTileIndex;
-      if (idx !== null) {
-        this.tree.tileset.tilenames[idx] = name;
+      if (idx === null) {
+        return;
+      }
+      const old_name = this.tree.tileset.tilenames[idx];
+      if (new_name == old_name) {
+        return;
+      }
+
+      this.tree.tileset.tilenames[idx] = new_name;
+      const animations = MANDATORY_ANIMATION_NAMES.map(x => this.tree[x]).concat(this.tree.animations);
+      for (let anim of animations) {
+        for (let frame of anim.frames) {
+          for (let sprite of frame.sprites) {
+            if (sprite.tile === old_name) {
+              sprite.tile = new_name;
+            }
+          }
+        }
       }
     },
   },
@@ -1576,7 +1592,7 @@ const TilesetTab = {
         </div>
         <div class="tile-info">
           <div>
-            <label>Name: <input :value="selectedTileName" @input="setSelectedTileName" style="width: 20%;"/></label>
+            <label>Name: <input :value="selectedTileName" @change="setSelectedTileName" style="width: 20%;"/></label>
           </div>
           <div>
             Animations using this tile: {{selectedTileUses}}
