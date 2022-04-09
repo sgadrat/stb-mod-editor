@@ -534,8 +534,10 @@ const app = Vue.createApp({
   },
 
   created() {
+    this.eventHandlers = [];
+
     // Setup simple key bindings
-    this.keydownHandle = (ev) => {
+    this.registerEventListener(document, 'keydown', (ev) => {
       if (ev.target !== document.body) {
         return;
       }
@@ -552,12 +554,11 @@ const app = Vue.createApp({
       } else if (ev.key == 'b') {
         this.conf.toggleBoxes();
       }
-    }
-    document.addEventListener('keydown', this.keydownHandle);
+    });
 
     // Setup the storage
     this.storage = new CharacterFileStorage(localStorage, this.reloadCharacterFileIndex);
-    this.storageHandle = window.addEventListener('storage', ev => {
+    this.registerEventListener(document, 'storage', (ev) => {
       if (ev.storageArea !== this.storage.storage) {
         return;
       }
@@ -570,8 +571,7 @@ const app = Vue.createApp({
   },
 
   beforeUnmount() {
-    document.removeEventListener('keydown', this.keydownHandle);
-    window.removeEventListener('storage', this.storageHandle);
+    this.removeEventListeners();
   },
 
   methods: {
@@ -683,6 +683,17 @@ const app = Vue.createApp({
     downloadAsJson() {
       console.debug("download character data as JSON");
       downloadJson(this.tree, this.tree.name + '.json');
+    },
+
+    registerEventListener(target, name, handler) {
+      this.eventHandlers.push([target, name, handler]);
+      target.addEventListener(name, handler);
+    },
+
+    removeEventListeners() {
+      for (let [target, name, handler] of this.eventHandlers) {
+        target.removeEventListener(name, handler);
+      }
     },
   },
 
