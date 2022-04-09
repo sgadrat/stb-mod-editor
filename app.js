@@ -476,6 +476,8 @@ class Conf {
 }
 
 
+const HISTORY_STATES_COUNT = 20;
+
 const app = Vue.createApp({
   data() {
     return {
@@ -484,6 +486,8 @@ const app = Vue.createApp({
       characterFileIndex: [],
       characterUrls: {},
       currentCharacterFile: null,
+      historyStates: [],
+      historyPausedChanges: null,  // null: normal, false: paused, true: changes during pause
       routerKey: 0,  // dummy value used to force a router refresh
     }
   },
@@ -531,6 +535,11 @@ const app = Vue.createApp({
     this.$watch('$route', () => {
       this.conf.resetToolbar();
     });
+
+    // Handle undo history
+    this.$watch('tree', (new_val) => {
+      this.commitHistoryState();
+    }, { deep: true });
   },
 
   created() {
@@ -553,6 +562,8 @@ const app = Vue.createApp({
         this.conf.cycleGrid();
       } else if (ev.key == 'b') {
         this.conf.toggleBoxes();
+      } else if (ev.key == 'z' && ev.ctrlKey) {
+        this.restoreHistoryState();
       }
     });
 
@@ -568,6 +579,20 @@ const app = Vue.createApp({
       this.reloadCharacterFileIndex();
     });
     this.reloadCharacterFileIndex();
+
+    // Group all mousemove changes from a single mouse down/up
+    this.registerEventListener(window, 'mousedown', (ev) => {
+      this.historyPausedChanges = false;
+    });
+    let unpauseHistoryHandler = (ev) => {
+      let commit = this.historyPausedChanges;
+      this.historyPausedChanges = null;
+      if (commit) {
+        this.commitHistoryState();
+      }
+    }
+    this.registerEventListener(window, 'mouseup', unpauseHistoryHandler);
+    this.registerEventListener(window, 'dragend', unpauseHistoryHandler);
   },
 
   beforeUnmount() {
@@ -693,6 +718,28 @@ const app = Vue.createApp({
     removeEventListeners() {
       for (let [target, name, handler] of this.eventHandlers) {
         target.removeEventListener(name, handler);
+      }
+    },
+
+    commitHistoryState() {
+      if (this.historyPausedChanges === null) {
+        console.debug("commit state");
+        this.historyStates.unshift(cloneData(this.tree));
+        this.historyStates.splice(HISTORY_STATES_COUNT);
+      } else {
+        this.historyPausedChanges = true;
+      }
+    },
+
+    restoreHistoryState() {
+      if (this.historyPausedChanges === null) {
+        // The last pushed state is the current state, not the previous one
+        if (this.historyStates.length > 1) {
+          console.debug("restore state");
+          this.historyStates.shift();
+          this.tree = this.historyStates.shift();
+          // Setting tree will trigger the watcher and re-push the new state
+        }
       }
     },
   },
@@ -2067,6 +2114,7 @@ const HelpTab = {
           <li><kbd>s</kbd> Toggle select tool</li>
           <li><kbd>g</kbd> Cycle through grid modes</li>
           <li><kbd>b</kbd> Toggle display of hitboxes and hurtboxes</li>
+          <li><kbd>Ctrl-Z</kbd> Undo changes</li>
         </ul>
       </li>
     </ul>
