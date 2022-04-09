@@ -535,7 +535,7 @@ const app = Vue.createApp({
 
   created() {
     // Setup simple key bindings
-    this.keypressHandle = (ev) => {
+    this.keydownHandle = (ev) => {
       if (ev.target !== document.body) {
         return;
       }
@@ -553,7 +553,7 @@ const app = Vue.createApp({
         this.conf.toggleBoxes();
       }
     }
-    document.addEventListener('keypress', this.keypressHandle);
+    document.addEventListener('keydown', this.keydownHandle);
 
     // Setup the storage
     this.storage = new CharacterFileStorage(localStorage, this.reloadCharacterFileIndex);
@@ -570,7 +570,7 @@ const app = Vue.createApp({
   },
 
   beforeUnmount() {
-    document.removeEventListener('keypress', this.keypressHandle);
+    document.removeEventListener('keydown', this.keydownHandle);
     window.removeEventListener('storage', this.storageHandle);
   },
 
