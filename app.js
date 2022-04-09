@@ -1281,8 +1281,6 @@ app.component('stb-animation-thumbnail', {
 
   methods: {
     updateAnimation() {
-      this.stopAnimation();
-
       const rect = this.rect || Utils.animationRect(this.animation, {});
       const swap = this.swap === undefined ? this.conf.colorSwap : this.swap;
       const palettes = Utils.getPalettes(this.tree, swap);
@@ -1306,6 +1304,7 @@ app.component('stb-animation-thumbnail', {
       Promise.all(promises).then(images => {
         let position = null;
         let ticks = 0;
+        this.stopAnimation();
         this.interval = setInterval(() => {
           ticks += 1;
           if (position === null) {
