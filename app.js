@@ -318,6 +318,20 @@ class Utils {
       }
     }
   }
+
+  static floodFillTile(pixels, x, y, color) {
+    let filled_color = pixels[y][x];
+    let stack = [[x, y]];
+    while (stack.length) {
+      let [x, y] = stack.pop();
+      if (x < 0 || x > 7 || y < 0 || y > 7) {
+        continue;
+      } else if (pixels[y][x] === filled_color) {
+        pixels[y][x] = color;
+        stack.push([x-1, y], [x+1, y], [x, y-1], [x, y+1]);
+      }
+    }
+  }
 }
 
 
@@ -399,7 +413,8 @@ class Conf {
   colorSwap = 0;  // index of color swap
   bgColor = '#3CBCFC';  // background color, for transparency
   zoom = 16;  // zoom value (display pixel per tile pixel)
-  tool = 'brush';  // active tool (brush, select)
+  tool = 'brush';  // active tool (brush, fill, select)
+  toggledTool = null;  // previous tool, before toggling to 'select'
   grid = 'tiles';  // grid mode (off, tiles, pixels)
   boxes = 'on';  // hitbox/hurtbox mode (off, on)
   // Toolbar configuration (see resetToolbar())
@@ -451,12 +466,27 @@ class Conf {
     return Utils.getPalettes(tree, this.colorSwap);
   }
 
+  setTool(tool) {
+    this.toggledTool = null;
+    this.tool = tool;
+  }
+
   toggleSelectTool() {
-    // For now there are only two tools, no need to store the previous one
-    if (this.tool !== 'select') {
-      this.tool = 'select';
+    if (this.tool === 'select') {
+      this.tool = this.toggledTool || 'brush';
     } else {
+      this.toggledTool = this.tool;
+      this.tool = 'select';
+    }
+  }
+
+  cycleTool() {
+    if (this.tool === 'select') {
       this.tool = 'brush';
+    } else if (this.tool === 'brush') {
+      this.tool = 'fill';
+    } else {
+      this.tool = 'select';
     }
   }
 
@@ -526,7 +556,7 @@ const app = Vue.createApp({
     }, { immediate: true });
     this.$watch('conf.tool', (val, _) => {
       const classes = this.$refs.content.classList;
-      for (let x of ['select', 'brush']) {
+      for (let x of ['select', 'brush', 'fill']) {
         classes.toggle('tool-' + x, val === x);
       }
     }, { immediate: true });
@@ -558,6 +588,8 @@ const app = Vue.createApp({
         this.conf.zoomStep(-1);
       } else if (ev.key == 's') {
         this.conf.toggleSelectTool();
+      } else if (ev.key == 't') {
+        this.conf.cycleTool();
       } else if (ev.key == 'g') {
         this.conf.cycleGrid();
       } else if (ev.key == 'b') {
@@ -841,8 +873,11 @@ app.component('toolbar', {
       <button class="icon" @click="conf.zoomStep(1)" title="Zoom in"><i class="fas fa-search-plus"/></button>
     </div>
     <div>
-      <button class="icon" @click="conf.tool = 'brush'" :class="{ enabled: conf.tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"/></button>
-      <button class="icon" @click="conf.tool = 'select'" :class="{ enabled: conf.tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
+      <button class="icon" @click="conf.setTool('brush')" :class="{ enabled: conf.tool === 'brush' }" title="Brush"><i class="fas fa-paint-brush"/></button>
+      <button class="icon" @click="conf.setTool('fill')" :class="{ enabled: conf.tool === 'fill' }" title="Fill"><i class="fas fa-fill-drip"/></button>
+    </div>
+    <div>
+      <button class="icon" @click="conf.setTool('select')" :class="{ enabled: conf.tool === 'select' }" title="Select"><i class="fas fa-mouse-pointer"/></button>
     </div>
     <div>
       <button class="icon" @click="conf.cycleGrid()" title="Grid style"><i class="fas fa-border-all"/></button>
@@ -864,23 +899,24 @@ app.component('stb-tile', {
       return `bg-${this.palette}-c${pixel}`;
     },
 
-    drawPixel(x, y) {
+    setPixel(x, y, color) {
       const px = this.flip?.[0] ? 7 - x : x;
       const py = this.flip?.[1] ? 7 - y : y;
-      this.tile.representation[py][px] = this.conf.color;
-    },
-
-    clearPixel(x, y) {
-      const px = this.flip?.[0] ? 7 - x : x;
-      const py = this.flip?.[1] ? 7 - y : y;
-      this.tile.representation[py][px] = 0;
+      if (this.conf.tool === 'fill') {
+        Utils.floodFillTile(this.tile.representation, px, py, color);
+      } else {
+        // Note: use 'brush' as fallback, even for 'select'
+        this.tile.representation[py][px] = color;
+      }
     },
 
     mouseMove(ev, x, y) {
-      if (ev.buttons & 1) {
-        this.drawPixel(x, y);
-      } else if (ev.buttons & 2) {
-        this.clearPixel(x, y);
+      if (this.conf.tool !== 'fill') {
+        if (ev.buttons & 1) {
+          this.setPixel(x, y, this.conf.color);
+        } else if (ev.buttons & 2) {
+          this.setPixel(x, y, 0);
+        }
       }
     },
   },
@@ -891,8 +927,8 @@ app.component('stb-tile', {
         <td v-for="(_, x) in 8"
           :class="getColorClass(x, y)"
           @mousemove="mouseMove($event, x, y)"
-          @click="drawPixel(x, y)"
-          @contextmenu.prevent="clearPixel(x, y)"
+          @click="setPixel(x, y, conf.color)"
+          @contextmenu.prevent="setPixel(x, y, 0)"
          />
       </tr>
     </table>
@@ -2069,6 +2105,7 @@ const HelpTab = {
         <ul>
           <li>The toolbar is the vertical panel on the left side</li>
           <li>Use <i class="fas fa-paint-brush"/> tool to draw</li>
+          <li>Use <i class="fas fa-fill-drip"/> tool to fill a surface (limited to tile boundaries)</li>
           <li>Select drawing color from the palette</li>
           <li>Use <i class="fas fa-palette"/> to change palette used for display and drawing</li>
           <li>Use <i class="fas fa-image"/> to select the background color, for transparent pixels</li>
@@ -2112,6 +2149,7 @@ const HelpTab = {
           <li><kbd>+</kbd> Zoom in</li>
           <li><kbd>-</kbd> Zoom out</li>
           <li><kbd>s</kbd> Toggle select tool</li>
+          <li><kbd>t</kbd> Cycle through tools</li>
           <li><kbd>g</kbd> Cycle through grid modes</li>
           <li><kbd>b</kbd> Toggle display of hitboxes and hurtboxes</li>
           <li><kbd>Ctrl-Z</kbd> Undo changes</li>
