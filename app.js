@@ -1630,7 +1630,7 @@ app.component('dnd-list', {
   },
 
   template: `
-    <template v-for="(item, idx) of items">
+    <template v-for="(item, idx) of items" :key="item.name">
       <div
         draggable="true"
         @dragstart="dragStart($event, idx)"
